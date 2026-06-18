@@ -32,8 +32,7 @@ export function rowsToCsv<T extends Record<string, unknown>>(rows: T[]) {
   }, new Set<string>()));
   const escape = (value: unknown) => {
     const text = typeof value === "object" && value !== null ? JSON.stringify(value) : String(value ?? "");
-    return `"${text.replaceAll('"', '""')}"`;
+    return `"${text.replace(/"/g, '""')}"`;
   };
   return [columns.join(","), ...rows.map((row) => columns.map((col) => escape(row[col])).join(","))].join("\n");
 }
-

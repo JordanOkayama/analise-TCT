@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: psicoedu-analytics-api
+    env: python
+    rootDir: backend
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: FRONTEND_ORIGINS
+        value: http://localhost:5173

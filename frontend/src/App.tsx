@@ -53,7 +53,7 @@ export default function App() {
     }
   }
 
-  const studentRows = useMemo(() => {
+  const studentRows = useMemo<Record<string, unknown>[]>(() => {
     return analysis?.students.map((student) => ({ ...student, ...student.metadata })) ?? [];
   }, [analysis]);
 

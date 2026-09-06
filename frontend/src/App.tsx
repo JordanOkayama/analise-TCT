@@ -29,6 +29,22 @@ const tabs: Array<{ id: Tab; label: string; icon: typeof Activity }> = [
   { id: "exports", label: "Relatório", icon: FileText }
 ];
 
+function normalizeDifficultyMetrics(analysis: AnalysisResponse): AnalysisResponse {
+  const denominator = Math.max(1, analysis.globals.students_count);
+  return {
+    ...analysis,
+    items: analysis.items.map((item) => {
+      const p_i = Number((item.frequency_correct / denominator).toFixed(4));
+      const { sp_atypical_rate: _removed, ...itemWithoutAtypicalRate } = item as ItemMetric & { sp_atypical_rate?: number };
+      return {
+        ...itemWithoutAtypicalRate,
+        proportion_correct: p_i,
+        difficulty_p_star: p_i
+      };
+    })
+  };
+}
+
 export default function App() {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<PreviewResponse | null>(null);
@@ -68,9 +84,13 @@ export default function App() {
     }
   }
 
-  const studentRows = useMemo<Record<string, unknown>[]>(() => {
-    return analysis?.students.map((student) => ({ ...student, ...student.metadata })) ?? [];
+  const displayAnalysis = useMemo(() => {
+    return analysis ? normalizeDifficultyMetrics(analysis) : null;
   }, [analysis]);
+
+  const studentRows = useMemo<Record<string, unknown>[]>(() => {
+    return displayAnalysis?.students.map((student) => ({ ...student, ...student.metadata })) ?? [];
+  }, [displayAnalysis]);
 
   const filterSourceRows = useMemo<Record<string, unknown>[]>(() => {
     return baseAnalysis?.students.map((student) => ({ ...student, ...student.metadata })) ?? [];
@@ -141,11 +161,11 @@ export default function App() {
           onError={setError}
         />
 
-        {analysis && (
+        {displayAnalysis && (
           <>
-            {analysis.warnings.length > 0 && (
+            {displayAnalysis.warnings.length > 0 && (
               <div className="rounded-lg border border-academy-gold/50 bg-academy-gold/10 p-4 text-sm text-yellow-100">
-                {analysis.warnings.map((warning) => <p key={warning}>{warning}</p>)}
+                {displayAnalysis.warnings.map((warning) => <p key={warning}>{warning}</p>)}
               </div>
             )}
 
@@ -168,7 +188,7 @@ export default function App() {
 
             <FilterBar
               rows={filterSourceRows}
-              columns={baseAnalysis?.preview.metadata_columns ?? analysis.preview.metadata_columns}
+              columns={baseAnalysis?.preview.metadata_columns ?? displayAnalysis.preview.metadata_columns}
               filters={filters}
               onChange={handleFiltersChange}
               applying={filterLoading}
@@ -176,8 +196,8 @@ export default function App() {
 
             {activeTab === "dashboard" && (
               <section className="space-y-5">
-                <MetricCards metrics={analysis.globals} />
-                <AcademicCharts analysis={analysis} />
+                <MetricCards metrics={displayAnalysis.globals} />
+                <AcademicCharts analysis={displayAnalysis} />
               </section>
             )}
 
@@ -188,7 +208,7 @@ export default function App() {
                 </CardHeader>
                 <CardContent>
                   <DataTable
-                    rows={analysis.items as unknown as Record<string, unknown>[]}
+                    rows={displayAnalysis.items as unknown as Record<string, unknown>[]}
                     filename="indicadores-itens.csv"
                     columns={[
                       { key: "item", label: "Item" },
@@ -218,16 +238,16 @@ export default function App() {
                       { key: "caution_index_c_n", label: "C_n", render: (row) => num((row as unknown as StudentMetric).caution_index_c_n) },
                       { key: "guesses", label: "Chutes" },
                       { key: "anomalous_errors", label: "Erros anômalos" },
-                      ...analysis.preview.metadata_columns.map((column) => ({ key: column, label: column }))
+                      ...displayAnalysis.preview.metadata_columns.map((column) => ({ key: column, label: column }))
                     ]}
                   />
                 </CardContent>
               </Card>
             )}
 
-            {activeTab === "sp" && <SPHeatmap analysis={analysis} />}
+            {activeTab === "sp" && <SPHeatmap analysis={displayAnalysis} />}
 
-            {activeTab === "groups" && <GroupComparison groups={analysis.groups} />}
+            {activeTab === "groups" && <GroupComparison groups={displayAnalysis.groups} />}
 
             {activeTab === "legend" && <LegendGuide />}
 
@@ -237,11 +257,11 @@ export default function App() {
                   <CardTitle>Exportação e relatório acadêmico</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-5">
-                  <ReportActions file={file} analysis={analysis} filters={filters} />
+                  <ReportActions file={file} analysis={displayAnalysis} filters={filters} />
                   <div className="grid gap-4 md:grid-cols-3">
                     <div className="rounded-md border border-academy-line bg-white/[.03] p-4">
                       <p className="text-sm font-medium text-slate-100">Resumo estatístico</p>
-                      <p className="mt-2 text-sm text-slate-400">Média {num(analysis.globals.mean_score, 2)}, DP {num(analysis.globals.score_std, 2)} e alfa {num(analysis.globals.cronbach_alpha)}.</p>
+                      <p className="mt-2 text-sm text-slate-400">Média {num(displayAnalysis.globals.mean_score, 2)}, DP {num(displayAnalysis.globals.score_std, 2)} e alfa {num(displayAnalysis.globals.cronbach_alpha)}.</p>
                     </div>
                     <div className="rounded-md border border-academy-line bg-white/[.03] p-4">
                       <p className="text-sm font-medium text-slate-100">Matriz zonal</p>

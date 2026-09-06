@@ -10,9 +10,14 @@ interface Props {
   applying?: boolean;
 }
 
+function normalizeFilterValue(value: unknown) {
+  const text = String(value ?? "").trim();
+  return /^-?\d+\.0$/.test(text) ? text.slice(0, -2) : text;
+}
+
 export function FilterBar({ rows, columns, filters, onChange, applying = false }: Props) {
   const [draftFilters, setDraftFilters] = useState<Record<string, string>>(filters);
-  const available = columns.filter((column) => rows.some((row) => row[column] !== undefined && row[column] !== null && String(row[column]) !== ""));
+  const available = columns.filter((column) => rows.some((row) => normalizeFilterValue(row[column]) !== ""));
 
   useEffect(() => {
     setDraftFilters(filters);
@@ -56,7 +61,7 @@ export function FilterBar({ rows, columns, filters, onChange, applying = false }
       </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {available.map((column) => {
-          const values = Array.from(new Set(rows.map((row) => String(row[column] ?? "")).filter(Boolean))).sort();
+          const values = Array.from(new Set(rows.map((row) => normalizeFilterValue(row[column])).filter(Boolean))).sort();
           return (
             <label key={column} className="text-xs text-slate-400">
               {column}

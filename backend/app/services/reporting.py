@@ -17,6 +17,8 @@ from reportlab.platypus import (
 
 from app.models.schemas import AnalysisResponse
 
+REPORT_VERSION = "1.0.10"
+
 
 def _fmt(value: float | int | None) -> str:
     if value is None:
@@ -65,6 +67,7 @@ def build_pdf_report(analysis: AnalysisResponse) -> bytes:
             "Análise baseada em Teoria Clássica dos Testes e organização S-P para matriz binária de respostas.",
             styles["BodyText"],
         ),
+        Paragraph(f"Versão do relatório: {REPORT_VERSION}", styles["BodyText"]),
         Spacer(1, 8),
     ]
 

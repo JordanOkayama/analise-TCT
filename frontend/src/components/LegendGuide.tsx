@@ -21,14 +21,13 @@ const itemRows: LegendRow[] = [
   { indicator: "Proporcao de acertos", meaning: "Acertos do item divididos pelo total de estudantes.", interpretation: "Quanto maior, mais facil tende a ser o item." },
   { indicator: "p_i", meaning: "Indice de dificuldade/facilidade calculado pela proporcao de acertos no item.", interpretation: "Quanto maior o p_i, mais facil foi o item para a amostra; quanto menor, mais dificil." },
   { indicator: "D_i", meaning: "Diferenca entre o desempenho do terco superior e do terco inferior no item.", interpretation: "Valores mais altos indicam que o item separa melhor estudantes de maior e menor desempenho." },
-  { indicator: "r_pbi", meaning: "Correlacao ponto-bisserial entre o item e o escore total sem o proprio item.", interpretation: "Valores positivos sugerem alinhamento entre o item e o desempenho geral." },
-  { indicator: "Taxa S-P", meaning: "Proporcao de respostas inesperadas do item na matriz zonal S-P.", interpretation: "Valores altos podem indicar comportamento atipico, ambiguidade ou necessidade de revisar o item." }
+  { indicator: "r_pbi", meaning: "Correlacao ponto-bisserial entre o item e o escore total sem o proprio item.", interpretation: "Valores positivos sugerem alinhamento entre o item e o desempenho geral." }
 ];
 
 const studentRows: LegendRow[] = [
   { indicator: "Escore bruto", meaning: "Total de itens acertados pelo estudante.", interpretation: "Medida direta do desempenho individual." },
   { indicator: "Percentual de acerto", meaning: "Escore bruto dividido pelo numero total de itens.", interpretation: "Facilita comparar desempenhos em provas com tamanhos diferentes." },
-  { indicator: "C_n", meaning: "Indice de cautela baseado nos erros anomalos do estudante.", interpretation: "Valores maiores indicam mais inconsistencias em relacao ao padrao esperado pela Curva S-P." },
+  { indicator: "C_n", meaning: "Indice de cautela ponderado pelas frequencias de acerto dos itens.", interpretation: "Valores maiores indicam mais inconsistencias em relacao ao padrao esperado pela Curva S-P." },
   { indicator: "Chutes", meaning: "Acertos inesperados em itens que seriam pouco provaveis para o padrao do estudante.", interpretation: "Pode indicar acerto casual, conhecimento pontual ou item com comportamento irregular." },
   { indicator: "Erros anomalos", meaning: "Erros em itens que seriam esperados como acertos para aquele estudante.", interpretation: "Pode sugerir distracao, lacuna especifica, problema de leitura ou inconsistencia no padrao de resposta." }
 ];

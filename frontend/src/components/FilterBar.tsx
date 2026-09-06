@@ -6,10 +6,11 @@ interface Props {
   rows: Array<Record<string, unknown>>;
   columns: string[];
   filters: Record<string, string>;
-  onChange: (filters: Record<string, string>) => void;
+  onChange: (filters: Record<string, string>) => void | Promise<void>;
+  applying?: boolean;
 }
 
-export function FilterBar({ rows, columns, filters, onChange }: Props) {
+export function FilterBar({ rows, columns, filters, onChange, applying = false }: Props) {
   const [draftFilters, setDraftFilters] = useState<Record<string, string>>(filters);
   const available = columns.filter((column) => rows.some((row) => row[column] !== undefined && row[column] !== null && String(row[column]) !== ""));
 
@@ -24,12 +25,12 @@ export function FilterBar({ rows, columns, filters, onChange }: Props) {
   }
 
   function apply() {
-    onChange(draftFilters);
+    void onChange(draftFilters);
   }
 
   function clear() {
     setDraftFilters({});
-    onChange({});
+    void onChange({});
   }
 
   const activeCount = Object.values(filters).filter(Boolean).length;
@@ -43,11 +44,11 @@ export function FilterBar({ rows, columns, filters, onChange }: Props) {
           {activeCount > 0 && <span className="rounded-full bg-academy-teal/15 px-2 py-0.5 text-xs text-academy-teal">{activeCount} ativo(s)</span>}
         </div>
         <div className="flex gap-2">
-          <Button variant="secondary" className="h-8 px-2" onClick={apply}>
+          <Button variant="secondary" className="h-8 px-2" onClick={apply} disabled={applying}>
             <Check className="h-4 w-4" />
-            Aplicar filtros
+            {applying ? "Aplicando..." : "Aplicar filtros"}
           </Button>
-          <Button variant="ghost" className="h-8 px-2" onClick={clear}>
+          <Button variant="ghost" className="h-8 px-2" onClick={clear} disabled={applying}>
             <X className="h-4 w-4" />
             Limpar
           </Button>

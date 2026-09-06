@@ -32,6 +32,7 @@ const tabs: Array<{ id: Tab; label: string; icon: typeof Activity }> = [
 export default function App() {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<PreviewResponse | null>(null);
+  const [baseAnalysis, setBaseAnalysis] = useState<AnalysisResponse | null>(null);
   const [analysis, setAnalysis] = useState<AnalysisResponse | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
   const [filters, setFilters] = useState<Record<string, string>>({});
@@ -40,6 +41,7 @@ export default function App() {
     return saved === "light" ? "light" : "dark";
   });
   const [loading, setLoading] = useState(false);
+  const [filterLoading, setFilterLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -54,8 +56,10 @@ export default function App() {
     setError(null);
     try {
       const result = await api.analyze(file);
+      setBaseAnalysis(result);
       setAnalysis(result);
       setPreview(result.preview);
+      setFilters({});
       setActiveTab("dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Não foi possível processar a matriz.");
@@ -68,11 +72,41 @@ export default function App() {
     return analysis?.students.map((student) => ({ ...student, ...student.metadata })) ?? [];
   }, [analysis]);
 
-  const filteredStudentRows = useMemo(() => {
-    return studentRows.filter((row) => {
-      return Object.entries(filters).every(([key, value]) => !value || String(row[key] ?? "") === value);
-    });
-  }, [studentRows, filters]);
+  const filterSourceRows = useMemo<Record<string, unknown>[]>(() => {
+    return baseAnalysis?.students.map((student) => ({ ...student, ...student.metadata })) ?? [];
+  }, [baseAnalysis]);
+
+  async function handleFiltersChange(nextFilters: Record<string, string>) {
+    setFilters(nextFilters);
+    const hasActiveFilters = Object.values(nextFilters).some(Boolean);
+    if (!hasActiveFilters) {
+      if (baseAnalysis) {
+        setAnalysis(baseAnalysis);
+        setPreview(baseAnalysis.preview);
+      }
+      return;
+    }
+    if (!file) return;
+
+    setFilterLoading(true);
+    setError(null);
+    try {
+      const result = await api.analyzeFiltered(file, nextFilters);
+      setAnalysis(result);
+      setPreview(result.preview);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Não foi possível aplicar os filtros.");
+    } finally {
+      setFilterLoading(false);
+    }
+  }
+
+  function handleFileChange(selectedFile: File | null) {
+    setFile(selectedFile);
+    setAnalysis(null);
+    setBaseAnalysis(null);
+    setFilters({});
+  }
 
   return (
     <main className="min-h-screen px-4 py-5 sm:px-6 lg:px-8">
@@ -101,7 +135,7 @@ export default function App() {
           preview={preview}
           loading={loading}
           error={error}
-          onFile={setFile}
+          onFile={handleFileChange}
           onPreview={setPreview}
           onAnalyze={analyze}
           onError={setError}
@@ -133,10 +167,11 @@ export default function App() {
             </nav>
 
             <FilterBar
-              rows={studentRows}
-              columns={analysis.preview.metadata_columns}
+              rows={filterSourceRows}
+              columns={baseAnalysis?.preview.metadata_columns ?? analysis.preview.metadata_columns}
               filters={filters}
-              onChange={setFilters}
+              onChange={handleFiltersChange}
+              applying={filterLoading}
             />
 
             {activeTab === "dashboard" && (
@@ -158,10 +193,9 @@ export default function App() {
                     columns={[
                       { key: "item", label: "Item" },
                       { key: "frequency_correct", label: "Acertos" },
-                      { key: "difficulty_p_star", label: "p_i", render: (row) => pct((row as unknown as ItemMetric).difficulty_p_star) },
+                      { key: "difficulty_p_star", label: "p_i", render: (row) => num((row as unknown as ItemMetric).difficulty_p_star) },
                       { key: "coefficient_d_i", label: "D_i", render: (row) => num((row as unknown as ItemMetric).coefficient_d_i) },
-                      { key: "point_biserial", label: "r_pbi", render: (row) => num((row as unknown as ItemMetric).point_biserial) },
-                      { key: "sp_atypical_rate", label: "Taxa S-P", render: (row) => num((row as unknown as ItemMetric).sp_atypical_rate) }
+                      { key: "point_biserial", label: "r_pbi", render: (row) => num((row as unknown as ItemMetric).point_biserial) }
                     ]}
                   />
                 </CardContent>
@@ -175,7 +209,7 @@ export default function App() {
                 </CardHeader>
                 <CardContent>
                   <DataTable
-                    rows={filteredStudentRows as Record<string, unknown>[]}
+                    rows={studentRows}
                     filename="indicadores-estudantes.csv"
                     columns={[
                       { key: "student_id", label: "ID" },
@@ -203,7 +237,7 @@ export default function App() {
                   <CardTitle>Exportação e relatório acadêmico</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-5">
-                  <ReportActions file={file} analysis={analysis} />
+                  <ReportActions file={file} analysis={analysis} filters={filters} />
                   <div className="grid gap-4 md:grid-cols-3">
                     <div className="rounded-md border border-academy-line bg-white/[.03] p-4">
                       <p className="text-sm font-medium text-slate-100">Resumo estatístico</p>

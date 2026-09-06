@@ -1,7 +1,8 @@
+import json
 from io import StringIO
 
 import pandas as pd
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from fastapi.responses import Response, StreamingResponse
 
 from app.models.schemas import AnalysisResponse, PreviewResponse
@@ -12,13 +13,39 @@ from app.services.reporting import build_pdf_report
 router = APIRouter()
 
 
-async def _context_from_upload(file: UploadFile) -> MatrixContext:
+def _parse_filters(filters: str | None) -> dict[str, str]:
+    if not filters:
+        return {}
+    try:
+        parsed = json.loads(filters)
+    except json.JSONDecodeError as exc:
+        raise HTTPException(status_code=422, detail="Filtros em formato inválido.") from exc
+    if not isinstance(parsed, dict):
+        raise HTTPException(status_code=422, detail="Filtros devem ser enviados como objeto JSON.")
+    return {str(key): str(value) for key, value in parsed.items() if str(value).strip()}
+
+
+async def _context_from_upload(file: UploadFile, filters: str | None = None) -> MatrixContext:
     raw = await file.read()
     try:
         df, separator = read_csv_upload(raw)
         prepared, id_column, item_columns, metadata_columns, issues = validate_and_prepare(df)
     except CSVValidationError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    selected_filters = _parse_filters(filters)
+    if selected_filters:
+        invalid_columns = [column for column in selected_filters if column not in metadata_columns]
+        if invalid_columns:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Colunas de filtro inválidas: {', '.join(invalid_columns)}.",
+            )
+        for column, value in selected_filters.items():
+            prepared = prepared[prepared[column].astype(str) == value]
+        if prepared.empty:
+            raise HTTPException(status_code=422, detail="Nenhum examinando encontrado para os filtros selecionados.")
+
     return MatrixContext(
         df=prepared,
         separator=separator,
@@ -53,9 +80,15 @@ async def analyze_csv(file: UploadFile = File(...)) -> AnalysisResponse:
     return analyze_matrix(context)
 
 
+@router.post("/analyze-filtered", response_model=AnalysisResponse)
+async def analyze_filtered_csv(file: UploadFile = File(...), filters: str | None = Form(None)) -> AnalysisResponse:
+    context = await _context_from_upload(file, filters)
+    return analyze_matrix(context)
+
+
 @router.post("/report/pdf")
-async def report_pdf(file: UploadFile = File(...)) -> Response:
-    context = await _context_from_upload(file)
+async def report_pdf(file: UploadFile = File(...), filters: str | None = Form(None)) -> Response:
+    context = await _context_from_upload(file, filters)
     analysis = analyze_matrix(context)
     pdf = build_pdf_report(analysis)
     return Response(
@@ -85,4 +118,3 @@ async def export_table(table_name: str, file: UploadFile = File(...)) -> Streami
         media_type="text/csv",
         headers={"Content-Disposition": f'attachment; filename="{table_name}.csv"'},
     )
-

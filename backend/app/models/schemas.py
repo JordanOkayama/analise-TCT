@@ -37,7 +37,6 @@ class ItemMetric(BaseModel):
     discrimination: float | None
     point_biserial: float | None
     coefficient_d_i: float | None
-    sp_atypical_rate: float
     item_total_correlation: float | None
 
 

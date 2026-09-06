@@ -152,13 +152,9 @@ def _build_sp(context: MatrixContext, scores: pd.Series) -> SPAnalysis:
     )
 
 
-def _item_metrics(context: MatrixContext, scores: pd.Series, sp: SPAnalysis) -> list[ItemMetric]:
+def _item_metrics(context: MatrixContext, scores: pd.Series) -> list[ItemMetric]:
     matrix = context.matrix
     metrics: list[ItemMetric] = []
-    unexpected_by_item: dict[str, int] = {item: 0 for item in context.item_columns}
-    for cell in sp.cells:
-        if cell.zone in {"unexpected_correct", "anomalous_error"}:
-            unexpected_by_item[cell.item] += 1
 
     for order, item in enumerate(context.item_columns):
         values = matrix[item]
@@ -177,7 +173,6 @@ def _item_metrics(context: MatrixContext, scores: pd.Series, sp: SPAnalysis) -> 
                 discrimination=discrimination,
                 point_biserial=point_biserial,
                 coefficient_d_i=discrimination,
-                sp_atypical_rate=round(unexpected_by_item.get(item, 0) / max(1, len(values)), 4),
                 item_total_correlation=point_biserial,
             )
         )
@@ -282,7 +277,7 @@ def analyze_matrix(context: MatrixContext) -> AnalysisResponse:
             min_score=int(scores.min()),
             max_score=int(scores.max()),
         ),
-        items=_item_metrics(context, scores, sp),
+        items=_item_metrics(context, scores),
         students=_student_metrics(context, scores, sp),
         sp=sp,
         groups=_group_metrics(context, scores),

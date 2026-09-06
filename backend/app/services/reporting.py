@@ -88,14 +88,13 @@ def build_pdf_report(analysis: AnalysisResponse) -> bytes:
     )
     story.extend([Spacer(1, 8), Paragraph("Interpretação básica", styles["Section"]), Paragraph(interpretation, styles["BodyText"])])
 
-    item_rows = [["Item", "p_i", "D_i", "r_pbi", "Taxa S-P"]]
+    item_rows = [["Item", "p_i", "D_i", "r_pbi"]]
     for item in analysis.items[:18]:
         item_rows.append([
             item.item,
             _fmt(item.difficulty_p_star),
             _fmt(item.coefficient_d_i),
             _fmt(item.point_biserial),
-            _fmt(item.sp_atypical_rate),
         ])
     story.extend([Spacer(1, 8), Paragraph("Indicadores por item", styles["Section"]), _table(item_rows)])
 

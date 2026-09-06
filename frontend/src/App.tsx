@@ -19,7 +19,7 @@ import type { AnalysisResponse, ItemMetric, PreviewResponse, StudentMetric, Zone
 
 type Tab = "dashboard" | "items" | "students" | "sp" | "groups" | "legend" | "exports";
 
-const APP_VERSION = "1.0.3";
+const APP_VERSION = "1.0.4";
 
 const tabs: Array<{ id: Tab; label: string; icon: typeof Activity }> = [
   { id: "dashboard", label: "Dashboard", icon: Activity },
@@ -46,27 +46,32 @@ function classifySPCell(value: 0 | 1, col: number, studentScore: number): Zone {
   return "expected_error";
 }
 
+function normalizeStudentId(value: string | number) {
+  return String(value).replace(/\.0$/, "");
+}
+
 function normalizeAnalysisMetrics(analysis: AnalysisResponse): AnalysisResponse {
   const denominator = Math.max(1, analysis.globals.students_count);
-  const studentScores = new Map(analysis.sp.student_curve.map((point) => [point.label, point.value]));
+  const studentScores = new Map(analysis.sp.student_curve.map((point) => [normalizeStudentId(point.label), point.value]));
   const itemWeights = new Map(analysis.sp.problem_curve.map((point) => [point.label, point.value]));
   const totalWeight = Math.max(1, analysis.sp.problem_curve.reduce((sum, point) => sum + point.value, 0));
   const zoneCounts = { ...emptyZoneCounts };
   const studentInconsistencies = new Map<string, { guesses: number; anomalousErrors: number; weightedPenalty: number }>();
   const normalizedCells = analysis.sp.cells.map((cell) => {
-    const score = studentScores.get(cell.student_id) ?? 0;
+    const studentId = normalizeStudentId(cell.student_id);
+    const score = studentScores.get(studentId) ?? 0;
     const zone = classifySPCell(cell.value, cell.col, score);
 
     zoneCounts[zone] += 1;
     if (zone === "unexpected_correct" || zone === "anomalous_error") {
-      const current = studentInconsistencies.get(cell.student_id) ?? { guesses: 0, anomalousErrors: 0, weightedPenalty: 0 };
+      const current = studentInconsistencies.get(studentId) ?? { guesses: 0, anomalousErrors: 0, weightedPenalty: 0 };
       if (zone === "unexpected_correct") current.guesses += 1;
       if (zone === "anomalous_error") current.anomalousErrors += 1;
       current.weightedPenalty += itemWeights.get(cell.item) ?? 0;
-      studentInconsistencies.set(cell.student_id, current);
+      studentInconsistencies.set(studentId, current);
     }
 
-    return { ...cell, zone };
+    return { ...cell, student_id: studentId, zone };
   });
 
   return {
@@ -81,9 +86,11 @@ function normalizeAnalysisMetrics(analysis: AnalysisResponse): AnalysisResponse 
       };
     }),
     students: analysis.students.map((student) => {
-      const inconsistency = studentInconsistencies.get(student.student_id);
+      const studentId = normalizeStudentId(student.student_id);
+      const inconsistency = studentInconsistencies.get(studentId);
       return {
         ...student,
+        student_id: studentId,
         guesses: inconsistency?.guesses ?? 0,
         anomalous_errors: inconsistency?.anomalousErrors ?? 0,
         caution_index_c_n: Number(((inconsistency?.weightedPenalty ?? 0) / totalWeight).toFixed(4))

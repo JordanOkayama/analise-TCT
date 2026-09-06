@@ -185,19 +185,28 @@ def _student_metrics(context: MatrixContext, scores: pd.Series, sp: SPAnalysis) 
     item_weights = ordered_matrix.sum(axis=0).astype(float)
     total_weight = float(item_weights.sum())
     inconsistency_by_student: dict[str, tuple[float, int, int]] = {}
+    details_by_student: dict[str, dict[str, float | int]] = {
+        student_id: {"guesses": 0, "anomalous_errors": 0, "penalty": 0.0}
+        for student_id in sp.ordered_students
+    }
 
-    for student_id, response_row in ordered_matrix.iterrows():
-        student_score = int(response_row.sum())
-        easy_items = sp.ordered_items[:student_score]
-        hard_items = sp.ordered_items[student_score:]
+    for cell in sp.cells:
+        if cell.zone not in {"anomalous_error", "unexpected_correct"}:
+            continue
+        details = details_by_student[cell.student_id]
+        if cell.zone == "unexpected_correct":
+            details["guesses"] = int(details["guesses"]) + 1
+        else:
+            details["anomalous_errors"] = int(details["anomalous_errors"]) + 1
+        details["penalty"] = float(details["penalty"]) + float(item_weights[cell.item])
 
-        anomalous_errors = int((response_row[easy_items] == 0).sum()) if easy_items else 0
-        guesses = int((response_row[hard_items] == 1).sum()) if hard_items else 0
-
-        easy_penalty = float(((1 - response_row[easy_items]) * item_weights[easy_items]).sum()) if easy_items else 0.0
-        hard_penalty = float((response_row[hard_items] * item_weights[hard_items]).sum()) if hard_items else 0.0
-        caution = (easy_penalty + hard_penalty) / total_weight if total_weight > 0 else 0.0
-        inconsistency_by_student[str(student_id)] = (round(caution, 4), guesses, anomalous_errors)
+    for student_id, details in details_by_student.items():
+        caution = float(details["penalty"]) / total_weight if total_weight > 0 else 0.0
+        inconsistency_by_student[str(student_id)] = (
+            round(caution, 4),
+            int(details["guesses"]),
+            int(details["anomalous_errors"]),
+        )
 
     metrics: list[StudentMetric] = []
     for idx, row in context.df.iterrows():
@@ -256,6 +265,10 @@ def analyze_matrix(context: MatrixContext) -> AnalysisResponse:
         warnings.append("O Alfa de Cronbach não pôde ser estimado com variância total nula ou amostra insuficiente.")
     if len(context.df) < 30:
         warnings.append("A amostra possui menos de 30 examinandos; interprete correlações e discriminação com cautela.")
+    if sp.zone_counts["unexpected_correct"] == 0 and sp.zone_counts["anomalous_error"] == 0:
+        warnings.append(
+            "A Curva S-P não identificou chutes ou erros anômalos. Isso pode ocorrer quando a matriz fica perfeitamente escalonada após ordenar estudantes por escore e itens por proporção de acertos."
+        )
 
     preview = build_preview(
         context.df,

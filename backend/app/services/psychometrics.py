@@ -195,21 +195,21 @@ def _student_metrics(context: MatrixContext, scores: pd.Series, sp: SPAnalysis) 
 
     for student_id, response_row in ordered_matrix.iterrows():
         student_score = int(response_row.sum())
-        guesses = 0
+        unexpected_corrects = 0
         anomalous_errors = 0
         penalty = 0.0
 
         for col, item in enumerate(sp.ordered_items):
             zone = _sp_zone(int(response_row[item]), col, student_score)
             if zone == "unexpected_correct":
-                guesses += 1
+                unexpected_corrects += 1
                 penalty += float(item_weights[item])
             elif zone == "anomalous_error":
                 anomalous_errors += 1
                 penalty += float(item_weights[item])
 
         caution = penalty / total_weight if total_weight > 0 else 0.0
-        inconsistency_by_student[str(student_id)] = (round(caution, 4), guesses, anomalous_errors)
+        inconsistency_by_student[str(student_id)] = (round(caution, 4), unexpected_corrects, anomalous_errors)
 
     metrics: list[StudentMetric] = []
     for idx, row in context.df.iterrows():
@@ -270,7 +270,7 @@ def analyze_matrix(context: MatrixContext) -> AnalysisResponse:
         warnings.append("A amostra possui menos de 30 examinandos; interprete correlações e discriminação com cautela.")
     if sp.zone_counts["unexpected_correct"] == 0 and sp.zone_counts["anomalous_error"] == 0:
         warnings.append(
-            "A Curva S-P não identificou chutes ou erros anômalos. Isso pode ocorrer quando a matriz fica perfeitamente escalonada após ordenar estudantes por escore e itens por proporção de acertos."
+            "A Curva S-P não identificou acertos inesperados ou erros anômalos. Isso pode ocorrer quando a matriz fica perfeitamente escalonada após ordenar estudantes por escore e itens por proporção de acertos."
         )
 
     preview = build_preview(

@@ -120,7 +120,18 @@ async def export_table(table_name: str, file: UploadFile = File(...)) -> Streami
     analysis = analyze_matrix(context)
     mapping = {
         "items": [item.model_dump() for item in analysis.items],
-        "students": [student.model_dump() for student in analysis.students],
+        "students": [
+            {
+                "ID": student.student_id,
+                "Escore": student.raw_score,
+                "% acerto": student.percent_correct,
+                "Índice de suspeição (C_n)": student.caution_index_c_n,
+                "Acertos inesperados": student.guesses,
+                "Erros anômalos": student.anomalous_errors,
+                **student.metadata,
+            }
+            for student in analysis.students
+        ],
         "groups": [group.model_dump() for group in analysis.groups],
     }
     if table_name not in mapping:

@@ -97,6 +97,10 @@ def _sp_zone(value: int, col: int, student_score: int) -> str:
     return "expected_error"
 
 
+def _student_id_series(context: MatrixContext) -> pd.Series:
+    return context.df[context.id_column].astype(str)
+
+
 def _build_sp(context: MatrixContext, scores: pd.Series) -> SPAnalysis:
     matrix = context.matrix.copy()
     item_correct = matrix.sum(axis=0)
@@ -104,13 +108,13 @@ def _build_sp(context: MatrixContext, scores: pd.Series) -> SPAnalysis:
 
     sortable = pd.DataFrame(
         {
-            "student_id": context.df[context.id_column].astype(str),
+            "student_id": _student_id_series(context),
             "score": scores,
         }
     )
     ordered_students = sortable.sort_values(["score", "student_id"], ascending=[False, True])["student_id"].tolist()
 
-    ordered_df = context.df.set_index(context.df[context.id_column].astype(str)).loc[ordered_students]
+    ordered_df = context.df.set_index(_student_id_series(context)).loc[ordered_students]
     ordered_matrix = ordered_df[ordered_items].astype(int)
 
     student_curve = [
@@ -182,7 +186,8 @@ def _item_metrics(context: MatrixContext, scores: pd.Series) -> list[ItemMetric]
 
 
 def _student_metrics(context: MatrixContext, scores: pd.Series, sp: SPAnalysis) -> list[StudentMetric]:
-    ordered_df = context.df.set_index(context.df[context.id_column].astype(str)).loc[sp.ordered_students]
+    student_ids = _student_id_series(context)
+    ordered_df = context.df.set_index(student_ids).loc[sp.ordered_students]
     ordered_matrix = ordered_df[sp.ordered_items].astype(int)
     item_weights = ordered_matrix.sum(axis=0).astype(float)
     total_weight = float(item_weights.sum())
@@ -208,7 +213,7 @@ def _student_metrics(context: MatrixContext, scores: pd.Series, sp: SPAnalysis) 
 
     metrics: list[StudentMetric] = []
     for idx, row in context.df.iterrows():
-        student_id = str(row[context.id_column])
+        student_id = student_ids.loc[idx]
         total_correct = int(scores.loc[idx])
         metadata = {col: row[col] for col in context.metadata_columns if col in context.df.columns}
         caution, guess_count, anomaly_count = inconsistency_by_student.get(student_id, (0.0, 0, 0))

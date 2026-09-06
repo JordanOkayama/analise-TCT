@@ -1,16 +1,37 @@
 import { Download } from "lucide-react";
-import type { ReactNode } from "react";
+import type { ReactNode, RefObject } from "react";
 import { useRef } from "react";
 import { toPng, toSvg } from "html-to-image";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 
-export function ChartCard({ title, children, id }: { title: string; children: ReactNode; id: string }) {
+interface ChartCardProps {
+  title: string;
+  children: ReactNode;
+  id: string;
+  exportRef?: RefObject<HTMLElement>;
+}
+
+export function ChartCard({ title, children, id, exportRef }: ChartCardProps) {
   const ref = useRef<HTMLDivElement>(null);
 
   async function exportImage(type: "png" | "svg") {
-    if (!ref.current) return;
-    const dataUrl = type === "png" ? await toPng(ref.current, { backgroundColor: "#0b1d23" }) : await toSvg(ref.current, { backgroundColor: "#0b1d23" });
+    const target = exportRef?.current ?? ref.current;
+    if (!target) return;
+    const width = Math.max(target.scrollWidth, target.clientWidth);
+    const height = Math.max(target.scrollHeight, target.clientHeight);
+    const options = {
+      backgroundColor: "#0b1d23",
+      width,
+      height,
+      style: {
+        width: `${width}px`,
+        height: `${height}px`,
+        maxWidth: "none",
+        overflow: "visible"
+      }
+    };
+    const dataUrl = type === "png" ? await toPng(target, options) : await toSvg(target, options);
     const anchor = document.createElement("a");
     anchor.href = dataUrl;
     anchor.download = `${id}.${type}`;

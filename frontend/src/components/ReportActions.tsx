@@ -4,10 +4,10 @@ import { downloadBlob, rowsToCsv } from "../lib/utils";
 import type { AnalysisResponse } from "../types/analysis";
 import { Button } from "./ui/button";
 
-export function ReportActions({ file, analysis, filters = {} }: { file: File | null; analysis: AnalysisResponse; filters?: Record<string, string> }) {
+export function ReportActions({ file, analysis }: { file: File | null; analysis: AnalysisResponse }) {
   async function downloadPdf() {
     if (!file) return;
-    const blob = await api.reportPdf(file, filters);
+    const blob = await api.reportPdf(file);
     downloadBlob(blob, "relatorio-psicometrico.pdf");
   }
 

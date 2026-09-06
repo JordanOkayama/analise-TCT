@@ -3,7 +3,6 @@ import { Activity, BookOpenCheck, Database, FileText, HelpCircle, Layers3, Micro
 import { api } from "./api/client";
 import { AcademicCharts } from "./components/Charts";
 import { DataTable } from "./components/DataTable";
-import { FilterBar } from "./components/FilterBar";
 import { GroupComparison } from "./components/GroupComparison";
 import { LegendGuide } from "./components/LegendGuide";
 import { MetricCards } from "./components/MetricCards";
@@ -19,7 +18,7 @@ import type { AnalysisResponse, ItemMetric, PreviewResponse, StudentMetric, Zone
 
 type Tab = "dashboard" | "items" | "students" | "sp" | "groups" | "legend" | "exports";
 
-const APP_VERSION = "1.0.5";
+const APP_VERSION = "1.0.6";
 
 const tabs: Array<{ id: Tab; label: string; icon: typeof Activity }> = [
   { id: "dashboard", label: "Dashboard", icon: Activity },
@@ -107,16 +106,13 @@ function normalizeAnalysisMetrics(analysis: AnalysisResponse): AnalysisResponse 
 export default function App() {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<PreviewResponse | null>(null);
-  const [baseAnalysis, setBaseAnalysis] = useState<AnalysisResponse | null>(null);
   const [analysis, setAnalysis] = useState<AnalysisResponse | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
-  const [filters, setFilters] = useState<Record<string, string>>({});
   const [theme, setTheme] = useState<ThemeMode>(() => {
     const saved = window.localStorage.getItem("psicoedu-theme");
     return saved === "light" ? "light" : "dark";
   });
   const [loading, setLoading] = useState(false);
-  const [filterLoading, setFilterLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -131,10 +127,8 @@ export default function App() {
     setError(null);
     try {
       const result = await api.analyze(file);
-      setBaseAnalysis(result);
       setAnalysis(result);
       setPreview(result.preview);
-      setFilters({});
       setActiveTab("dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Não foi possível processar a matriz.");
@@ -151,40 +145,9 @@ export default function App() {
     return displayAnalysis?.students.map((student) => ({ ...student, ...student.metadata })) ?? [];
   }, [displayAnalysis]);
 
-  const filterSourceRows = useMemo<Record<string, unknown>[]>(() => {
-    return baseAnalysis?.students.map((student) => ({ ...student, ...student.metadata })) ?? [];
-  }, [baseAnalysis]);
-
-  async function handleFiltersChange(nextFilters: Record<string, string>) {
-    setFilters(nextFilters);
-    const hasActiveFilters = Object.values(nextFilters).some(Boolean);
-    if (!hasActiveFilters) {
-      if (baseAnalysis) {
-        setAnalysis(baseAnalysis);
-        setPreview(baseAnalysis.preview);
-      }
-      return;
-    }
-    if (!file) return;
-
-    setFilterLoading(true);
-    setError(null);
-    try {
-      const result = await api.analyzeFiltered(file, nextFilters);
-      setAnalysis(result);
-      setPreview(result.preview);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Não foi possível aplicar os filtros.");
-    } finally {
-      setFilterLoading(false);
-    }
-  }
-
   function handleFileChange(selectedFile: File | null) {
     setFile(selectedFile);
     setAnalysis(null);
-    setBaseAnalysis(null);
-    setFilters({});
   }
 
   return (
@@ -245,14 +208,6 @@ export default function App() {
                 );
               })}
             </nav>
-
-            <FilterBar
-              rows={filterSourceRows}
-              columns={baseAnalysis?.preview.metadata_columns ?? displayAnalysis.preview.metadata_columns}
-              filters={filters}
-              onChange={handleFiltersChange}
-              applying={filterLoading}
-            />
 
             {activeTab === "dashboard" && (
               <section className="space-y-5">
@@ -317,7 +272,7 @@ export default function App() {
                   <CardTitle>Exportação e relatório acadêmico</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-5">
-                  <ReportActions file={file} analysis={displayAnalysis} filters={filters} />
+                  <ReportActions file={file} analysis={displayAnalysis} />
                   <div className="grid gap-4 md:grid-cols-3">
                     <div className="rounded-md border border-academy-line bg-white/[.03] p-4">
                       <p className="text-sm font-medium text-slate-100">Resumo estatístico</p>

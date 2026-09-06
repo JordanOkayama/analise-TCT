@@ -64,12 +64,12 @@ export function AcademicCharts({ analysis }: { analysis: AnalysisResponse }) {
         </ResponsiveContainer>
       </ChartCard>
 
-      <ChartCard id="cautela-escore" title="Dispersão entre cautela e escore">
+      <ChartCard id="suspeicao-escore" title="Dispersão entre índice de suspeição e escore">
         <ResponsiveContainer width="100%" height={300}>
           <ScatterChart>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis type="number" dataKey="raw_score" name="Escore" {...axis} />
-            <YAxis type="number" dataKey="caution_index_c_n" name="Cautela" {...axis} />
+            <YAxis type="number" dataKey="caution_index_c_n" name="Índice de suspeição" {...axis} />
             <Tooltip cursor={{ strokeDasharray: "3 3" }} contentStyle={{ background: "#0b1d23", border: "1px solid #1e3a43" }} />
             <Scatter data={analysis.students} fill="#ef6b73" />
           </ScatterChart>

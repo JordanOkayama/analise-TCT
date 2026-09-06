@@ -27,15 +27,15 @@ const itemRows: LegendRow[] = [
 const studentRows: LegendRow[] = [
   { indicator: "Escore bruto", meaning: "Total de itens acertados pelo estudante.", interpretation: "Medida direta do desempenho individual." },
   { indicator: "Percentual de acerto", meaning: "Escore bruto dividido pelo numero total de itens.", interpretation: "Facilita comparar desempenhos em provas com tamanhos diferentes." },
-  { indicator: "C_n", meaning: "Indice de cautela ponderado pelas frequencias de acerto dos itens.", interpretation: "Valores maiores indicam mais inconsistencias em relacao ao padrao esperado pela Curva S-P." },
-  { indicator: "Chutes", meaning: "Acertos inesperados em itens que seriam pouco provaveis para o padrao do estudante.", interpretation: "Pode indicar acerto casual, conhecimento pontual ou item com comportamento irregular." },
+  { indicator: "Índice de suspeição (C_n)", meaning: "Indicador ponderado pelas frequencias de acerto dos itens na Curva S-P.", interpretation: "Valores maiores indicam mais inconsistencias em relacao ao padrao esperado pela Curva S-P." },
+  { indicator: "Acertos inesperados", meaning: "Acertos em itens que seriam pouco provaveis para o padrao do estudante.", interpretation: "Pode indicar acerto casual, conhecimento pontual ou item com comportamento irregular." },
   { indicator: "Erros anomalos", meaning: "Erros em itens que seriam esperados como acertos para aquele estudante.", interpretation: "Pode sugerir distracao, lacuna especifica, problema de leitura ou inconsistencia no padrao de resposta." }
 ];
 
 const spRows: LegendRow[] = [
   { indicator: "Acerto esperado", meaning: "Acerto coerente com o desempenho do estudante e a facilidade do item.", interpretation: "Padrao regular na matriz S-P." },
   { indicator: "Erro esperado", meaning: "Erro coerente com o desempenho do estudante e a dificuldade do item.", interpretation: "Padrao regular na matriz S-P." },
-  { indicator: "Acerto inesperado", meaning: "Acerto em item que seria considerado dificil para o perfil do estudante.", interpretation: "Pode ser chute, dominio especifico ou item com calibracao instavel." },
+  { indicator: "Acerto inesperado", meaning: "Acerto em item que seria considerado dificil para o perfil do estudante.", interpretation: "Pode indicar acerto casual, dominio especifico ou item com calibracao instavel." },
   { indicator: "Erro anomalo", meaning: "Erro em item que seria esperado como acerto para o perfil do estudante.", interpretation: "Pode indicar descuido, dificuldade localizada ou possivel problema no item." }
 ];
 
@@ -43,7 +43,7 @@ const quickRows: LegendRow[] = [
   { indicator: "p_i baixo + r_pbi baixo", meaning: "Item dificil e pouco associado ao desempenho geral.", interpretation: "Prioridade para revisao pedagogica ou tecnica." },
   { indicator: "D_i baixo", meaning: "O item pouco diferencia grupos de maior e menor desempenho.", interpretation: "Pode ser facil demais, dificil demais ou desalinhado ao construto." },
   { indicator: "Muitos erros anomalos", meaning: "Ha respostas erradas fora do padrao esperado.", interpretation: "Investigar enunciado, alternativa correta, conteudo ou condicoes de aplicacao." },
-  { indicator: "Muitos chutes", meaning: "Ha acertos fora do padrao esperado.", interpretation: "Investigar possibilidade de acerto casual, item ambivalente ou conhecimento pontual." }
+  { indicator: "Muitos acertos inesperados", meaning: "Ha acertos fora do padrao esperado.", interpretation: "Investigar possibilidade de acerto casual, item ambivalente ou conhecimento pontual." }
 ];
 
 export function LegendGuide() {

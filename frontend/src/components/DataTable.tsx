@@ -9,6 +9,7 @@ interface Column<T> {
   key: keyof T | string;
   label: string;
   render?: (row: T) => ReactNode;
+  csvValue?: (row: T) => string | number;
 }
 
 export function DataTable<T extends Record<string, unknown>>({ rows, columns, filename }: { rows: T[]; columns: Column<T>[]; filename: string }) {
@@ -36,6 +37,17 @@ export function DataTable<T extends Record<string, unknown>>({ rows, columns, fi
     }
   }
 
+  function exportVisibleRows() {
+    return filtered.map((row) => {
+      return Object.fromEntries(
+        columns.map((column) => [
+          column.label,
+          column.csvValue ? column.csvValue(row) : String(row[String(column.key)] ?? "")
+        ])
+      );
+    });
+  }
+
   return (
     <div className="space-y-3">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -45,7 +57,7 @@ export function DataTable<T extends Record<string, unknown>>({ rows, columns, fi
         </div>
         <Button
           variant="secondary"
-          onClick={() => downloadBlob(new Blob([rowsToCsv(filtered)], { type: "text/csv;charset=utf-8" }), filename)}
+          onClick={() => downloadBlob(new Blob([rowsToCsv(exportVisibleRows())], { type: "text/csv;charset=utf-8" }), filename)}
         >
           <Download className="h-4 w-4" />
           CSV

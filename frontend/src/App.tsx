@@ -18,7 +18,7 @@ import type { AnalysisResponse, ItemMetric, PreviewResponse, StudentMetric, Zone
 
 type Tab = "dashboard" | "items" | "students" | "sp" | "groups" | "legend" | "exports";
 
-const APP_VERSION = "1.0.11";
+const APP_VERSION = "1.0.12";
 
 const tabs: Array<{ id: Tab; label: string; icon: typeof Activity }> = [
   { id: "dashboard", label: "Dashboard", icon: Activity },
@@ -267,8 +267,8 @@ export default function App() {
                       { key: "student_id", label: "ID" },
                       { key: "raw_score", label: "Escore" },
                       { key: "percent_correct", label: "% acerto", render: (row) => pct((row as unknown as StudentMetric).percent_correct) },
-                      { key: "caution_index_c_n", label: "C_n", render: (row) => num((row as unknown as StudentMetric).caution_index_c_n) },
-                      { key: "guesses", label: "Chutes" },
+                      { key: "caution_index_c_n", label: "Índice de suspeição (C_n)", render: (row) => num((row as unknown as StudentMetric).caution_index_c_n), csvValue: (row) => num((row as unknown as StudentMetric).caution_index_c_n) },
+                      { key: "guesses", label: "Acertos inesperados" },
                       { key: "anomalous_errors", label: "Erros anômalos" },
                       ...displayAnalysis.preview.metadata_columns.map((column) => ({ key: column, label: column }))
                     ]}
@@ -297,7 +297,7 @@ export default function App() {
                     </div>
                     <div className="rounded-md border border-academy-line bg-white/[.03] p-4">
                       <p className="text-sm font-medium text-slate-100">Matriz zonal</p>
-                      <p className="mt-2 text-sm text-slate-400">Chutes e erros anômalos destacados para interpretação diagnóstica.</p>
+                      <p className="mt-2 text-sm text-slate-400">Acertos inesperados e erros anômalos destacados para interpretação diagnóstica.</p>
                     </div>
                     <div className="rounded-md border border-academy-line bg-white/[.03] p-4">
                       <p className="text-sm font-medium text-slate-100">Expansão futura</p>

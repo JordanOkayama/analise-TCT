@@ -14,7 +14,7 @@ from app.services.csv_parser import (
     validate_and_prepare,
 )
 from app.services.psychometrics import MatrixContext, analyze_matrix
-from app.services.reporting import build_pdf_report
+from app.services.reporting import REPORT_VERSION, build_pdf_report
 
 router = APIRouter()
 
@@ -69,7 +69,12 @@ async def _context_from_upload(file: UploadFile, filters: str | None = None) -> 
 
 @router.get("/health")
 def health() -> dict[str, str]:
-    return {"status": "ok", "service": "psicoedu-analytics"}
+    return {
+        "status": "ok",
+        "service": "psicoedu-analytics",
+        "api_version": REPORT_VERSION,
+        "report_version": REPORT_VERSION,
+    }
 
 
 @router.post("/preview", response_model=PreviewResponse)

@@ -17,7 +17,7 @@ from reportlab.platypus import (
 
 from app.models.schemas import AnalysisResponse
 
-REPORT_VERSION = "1.0.10"
+REPORT_VERSION = "1.0.11"
 
 
 def _fmt(value: float | int | None) -> str:

@@ -122,7 +122,8 @@ async def export_table(table_name: str, file: UploadFile = File(...)) -> Streami
         raise HTTPException(status_code=404, detail="Tabela não disponível para exportação.")
     frame = pd.json_normalize(mapping[table_name])
     output = StringIO()
-    frame.to_csv(output, index=False)
+    output.write("\ufeffsep=;\n")
+    frame.to_csv(output, index=False, sep=";")
     output.seek(0)
     return StreamingResponse(
         iter([output.getvalue()]),

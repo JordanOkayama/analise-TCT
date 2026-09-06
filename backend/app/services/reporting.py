@@ -7,6 +7,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import cm
 from reportlab.platypus import (
+    PageBreak,
     Paragraph,
     SimpleDocTemplate,
     Spacer,
@@ -89,7 +90,7 @@ def build_pdf_report(analysis: AnalysisResponse) -> bytes:
     story.extend([Spacer(1, 8), Paragraph("Interpretação básica", styles["Section"]), Paragraph(interpretation, styles["BodyText"])])
 
     item_rows = [["Item", "p_i", "D_i", "r_pbi"]]
-    for item in analysis.items[:18]:
+    for item in analysis.items:
         item_rows.append([
             item.item,
             _fmt(item.difficulty_p_star),
@@ -97,6 +98,18 @@ def build_pdf_report(analysis: AnalysisResponse) -> bytes:
             _fmt(item.point_biserial),
         ])
     story.extend([Spacer(1, 8), Paragraph("Indicadores por item", styles["Section"]), _table(item_rows)])
+
+    student_rows = [["ID", "Escore", "% acerto", "C_n", "Chutes", "Erros anômalos"]]
+    for student in analysis.students:
+        student_rows.append([
+            student.student_id,
+            str(student.raw_score),
+            f"{student.percent_correct * 100:.1f}%",
+            _fmt(student.caution_index_c_n),
+            str(student.guesses),
+            str(student.anomalous_errors),
+        ])
+    story.extend([PageBreak(), Paragraph("Indicadores por estudante", styles["Section"]), _table(student_rows)])
 
     zone = analysis.sp.zone_counts
     zone_rows = [["Zona S-P", "Frequência"], *[[key, str(value)] for key, value in zone.items()]]

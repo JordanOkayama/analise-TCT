@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Activity, BookOpenCheck, Database, FileText, HelpCircle, Layers3, Microscope, UsersRound } from "lucide-react";
 import { api } from "./api/client";
 import { AcademicCharts } from "./components/Charts";
@@ -9,6 +9,7 @@ import { LegendGuide } from "./components/LegendGuide";
 import { MetricCards } from "./components/MetricCards";
 import { ReportActions } from "./components/ReportActions";
 import { SPHeatmap } from "./components/SPHeatmap";
+import { ThemeToggle, type ThemeMode } from "./components/ThemeToggle";
 import { UploadPanel } from "./components/UploadPanel";
 import { Button } from "./components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./components/ui/card";
@@ -34,8 +35,18 @@ export default function App() {
   const [analysis, setAnalysis] = useState<AnalysisResponse | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
   const [filters, setFilters] = useState<Record<string, string>>({});
+  const [theme, setTheme] = useState<ThemeMode>(() => {
+    const saved = window.localStorage.getItem("psicoedu-theme");
+    return saved === "light" ? "light" : "dark";
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.style.colorScheme = theme;
+    window.localStorage.setItem("psicoedu-theme", theme);
+  }, [theme]);
 
   async function analyze() {
     if (!file) return;
@@ -77,7 +88,8 @@ export default function App() {
               Ambiente acadêmico para análise psicométrica de avaliações educacionais, com foco em Educação Matemática e Avaliação Educacional.
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <ThemeToggle theme={theme} onToggle={() => setTheme((current) => current === "dark" ? "light" : "dark")} />
             <Badge className="rounded-md">FastAPI</Badge>
             <Badge className="rounded-md">React + TypeScript</Badge>
             <Badge className="rounded-md">Exportação acadêmica</Badge>
@@ -146,11 +158,10 @@ export default function App() {
                     columns={[
                       { key: "item", label: "Item" },
                       { key: "frequency_correct", label: "Acertos" },
-                      { key: "proportion_correct", label: "Prop. acerto", render: (row) => pct((row as unknown as ItemMetric).proportion_correct) },
-                      { key: "difficulty_p_star", label: "p*", render: (row) => num((row as unknown as ItemMetric).difficulty_p_star) },
-                      { key: "discrimination", label: "Discriminação", render: (row) => num((row as unknown as ItemMetric).discrimination) },
+                      { key: "difficulty_p_star", label: "p_i", render: (row) => pct((row as unknown as ItemMetric).difficulty_p_star) },
+                      { key: "coefficient_d_i", label: "D_i", render: (row) => num((row as unknown as ItemMetric).coefficient_d_i) },
                       { key: "point_biserial", label: "r_pbi", render: (row) => num((row as unknown as ItemMetric).point_biserial) },
-                      { key: "coefficient_d_i", label: "D_i", render: (row) => num((row as unknown as ItemMetric).coefficient_d_i) }
+                      { key: "sp_atypical_rate", label: "Taxa S-P", render: (row) => num((row as unknown as ItemMetric).sp_atypical_rate) }
                     ]}
                   />
                 </CardContent>

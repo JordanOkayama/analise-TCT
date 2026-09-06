@@ -34,7 +34,8 @@ export interface ItemMetric {
   difficulty_p_star: number;
   discrimination: number | null;
   point_biserial: number | null;
-  coefficient_d_i: number;
+  coefficient_d_i: number | null;
+  sp_atypical_rate: number;
   item_total_correlation: number | null;
 }
 
@@ -93,4 +94,3 @@ export interface AnalysisResponse {
   preview: PreviewResponse;
   warnings: string[];
 }
-

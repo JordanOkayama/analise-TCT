@@ -19,10 +19,10 @@ const globalRows: LegendRow[] = [
 const itemRows: LegendRow[] = [
   { indicator: "Frequencia de acertos", meaning: "Quantidade absoluta de estudantes que acertaram o item.", interpretation: "Mostra o volume de acertos, mas deve ser lida junto ao tamanho da amostra." },
   { indicator: "Proporcao de acertos", meaning: "Acertos do item divididos pelo total de estudantes.", interpretation: "Quanto maior, mais facil tende a ser o item." },
-  { indicator: "p*", meaning: "Indice de dificuldade calculado como 1 menos a proporcao de acertos.", interpretation: "Quanto maior o p*, mais dificil foi o item para a amostra." },
-  { indicator: "Discriminacao", meaning: "Diferenca entre o desempenho do grupo superior e do grupo inferior no item.", interpretation: "Valores mais altos indicam que o item separa melhor estudantes de maior e menor desempenho." },
+  { indicator: "p_i", meaning: "Indice de dificuldade/facilidade calculado pela proporcao de acertos no item.", interpretation: "Quanto maior o p_i, mais facil foi o item para a amostra; quanto menor, mais dificil." },
+  { indicator: "D_i", meaning: "Diferenca entre o desempenho do terco superior e do terco inferior no item.", interpretation: "Valores mais altos indicam que o item separa melhor estudantes de maior e menor desempenho." },
   { indicator: "r_pbi", meaning: "Correlacao ponto-bisserial entre o item e o escore total sem o proprio item.", interpretation: "Valores positivos sugerem alinhamento entre o item e o desempenho geral." },
-  { indicator: "D_i", meaning: "Proporcao de respostas inesperadas do item na matriz zonal S-P.", interpretation: "Valores altos podem indicar comportamento atipico, ambiguidade ou necessidade de revisar o item." }
+  { indicator: "Taxa S-P", meaning: "Proporcao de respostas inesperadas do item na matriz zonal S-P.", interpretation: "Valores altos podem indicar comportamento atipico, ambiguidade ou necessidade de revisar o item." }
 ];
 
 const studentRows: LegendRow[] = [
@@ -41,8 +41,8 @@ const spRows: LegendRow[] = [
 ];
 
 const quickRows: LegendRow[] = [
-  { indicator: "p* alto + r_pbi baixo", meaning: "Item dificil e pouco associado ao desempenho geral.", interpretation: "Prioridade para revisao pedagogica ou tecnica." },
-  { indicator: "Discriminacao baixa", meaning: "O item pouco diferencia grupos de maior e menor desempenho.", interpretation: "Pode ser facil demais, dificil demais ou desalinhado ao construto." },
+  { indicator: "p_i baixo + r_pbi baixo", meaning: "Item dificil e pouco associado ao desempenho geral.", interpretation: "Prioridade para revisao pedagogica ou tecnica." },
+  { indicator: "D_i baixo", meaning: "O item pouco diferencia grupos de maior e menor desempenho.", interpretation: "Pode ser facil demais, dificil demais ou desalinhado ao construto." },
   { indicator: "Muitos erros anomalos", meaning: "Ha respostas erradas fora do padrao esperado.", interpretation: "Investigar enunciado, alternativa correta, conteudo ou condicoes de aplicacao." },
   { indicator: "Muitos chutes", meaning: "Ha acertos fora do padrao esperado.", interpretation: "Investigar possibilidade de acerto casual, item ambivalente ou conhecimento pontual." }
 ];
@@ -112,4 +112,3 @@ function LegendTable({ title, rows }: { title: string; rows: LegendRow[] }) {
     </Card>
   );
 }
-

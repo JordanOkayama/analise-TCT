@@ -8,6 +8,11 @@
   background: #071418;
 }
 
+:root[data-theme="light"] {
+  color-scheme: light;
+  background: #f5f8f8;
+}
+
 body {
   margin: 0;
   min-width: 320px;
@@ -16,6 +21,61 @@ body {
     linear-gradient(140deg, rgba(15, 47, 63, .78), rgba(7, 20, 24, .94) 38%, rgba(12, 31, 36, 1)),
     #071418;
   color: #e7f1f0;
+}
+
+:root[data-theme="light"] body {
+  background:
+    linear-gradient(140deg, rgba(222, 236, 238, .95), rgba(248, 252, 251, .98) 42%, rgba(234, 243, 241, 1)),
+    #f5f8f8;
+  color: #102027;
+}
+
+:root[data-theme="light"] .bg-academy-panel,
+:root[data-theme="light"] .bg-academy-panel\/75,
+:root[data-theme="light"] .bg-academy-panel\/86 {
+  background-color: rgba(255, 255, 255, .9) !important;
+}
+
+:root[data-theme="light"] .bg-academy-blue,
+:root[data-theme="light"] .bg-academy-blue\/95 {
+  background-color: #e3eef0 !important;
+}
+
+:root[data-theme="light"] .border-academy-line {
+  border-color: #cbdde1 !important;
+}
+
+:root[data-theme="light"] .text-white,
+:root[data-theme="light"] .text-slate-50,
+:root[data-theme="light"] .text-slate-100,
+:root[data-theme="light"] .text-slate-200 {
+  color: #102027 !important;
+}
+
+:root[data-theme="light"] .text-slate-300,
+:root[data-theme="light"] .text-slate-400 {
+  color: #405a62 !important;
+}
+
+:root[data-theme="light"] .text-slate-500 {
+  color: #60777f !important;
+}
+
+:root[data-theme="light"] .bg-white\/5,
+:root[data-theme="light"] .bg-white\/6,
+:root[data-theme="light"] .bg-white\/8,
+:root[data-theme="light"] .bg-white\/10,
+:root[data-theme="light"] .bg-white\/\[\.03\] {
+  background-color: rgba(255, 255, 255, .72) !important;
+}
+
+:root[data-theme="light"] .bg-\[\#071418\],
+:root[data-theme="light"] .bg-\[\#071418\]\/70 {
+  background-color: #ffffff !important;
+}
+
+:root[data-theme="light"] .shadow-glow {
+  box-shadow: 0 0 0 1px rgba(23, 107, 93, .12), 0 14px 36px rgba(15, 47, 63, .08) !important;
 }
 
 button, input, select {
@@ -40,4 +100,3 @@ button, input, select {
   background: #31515b;
   border-radius: 999px;
 }
-

@@ -28,7 +28,7 @@ export function AcademicCharts({ analysis }: { analysis: AnalysisResponse }) {
 
   return (
     <div className="grid gap-5 xl:grid-cols-2">
-      <ChartCard id="dificuldade-itens" title="Dificuldade dos itens (p*)">
+      <ChartCard id="dificuldade-itens" title="Índice de dificuldade/facilidade (p_i)">
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={analysis.items}>
             <CartesianGrid strokeDasharray="3 3" />

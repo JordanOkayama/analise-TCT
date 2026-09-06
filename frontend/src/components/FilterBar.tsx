@@ -1,4 +1,5 @@
-import { SlidersHorizontal, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Check, SlidersHorizontal, X } from "lucide-react";
 import { Button } from "./ui/button";
 
 interface Props {
@@ -9,16 +10,29 @@ interface Props {
 }
 
 export function FilterBar({ rows, columns, filters, onChange }: Props) {
+  const [draftFilters, setDraftFilters] = useState<Record<string, string>>(filters);
   const available = columns.filter((column) => rows.some((row) => row[column] !== undefined && row[column] !== null && String(row[column]) !== ""));
+
+  useEffect(() => {
+    setDraftFilters(filters);
+  }, [filters]);
+
   if (!available.length) return null;
 
   function setFilter(column: string, value: string) {
-    onChange({ ...filters, [column]: value });
+    setDraftFilters({ ...draftFilters, [column]: value });
+  }
+
+  function apply() {
+    onChange(draftFilters);
   }
 
   function clear() {
+    setDraftFilters({});
     onChange({});
   }
+
+  const activeCount = Object.values(filters).filter(Boolean).length;
 
   return (
     <div className="rounded-lg border border-academy-line bg-academy-panel/75 p-4">
@@ -26,11 +40,18 @@ export function FilterBar({ rows, columns, filters, onChange }: Props) {
         <div className="flex items-center gap-2 text-sm font-medium text-slate-100">
           <SlidersHorizontal className="h-4 w-4 text-academy-teal" />
           Filtros de metadados
+          {activeCount > 0 && <span className="rounded-full bg-academy-teal/15 px-2 py-0.5 text-xs text-academy-teal">{activeCount} ativo(s)</span>}
         </div>
-        <Button variant="ghost" className="h-8 px-2" onClick={clear}>
-          <X className="h-4 w-4" />
-          Limpar
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="secondary" className="h-8 px-2" onClick={apply}>
+            <Check className="h-4 w-4" />
+            Aplicar filtros
+          </Button>
+          <Button variant="ghost" className="h-8 px-2" onClick={clear}>
+            <X className="h-4 w-4" />
+            Limpar
+          </Button>
+        </div>
       </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {available.map((column) => {
@@ -40,7 +61,7 @@ export function FilterBar({ rows, columns, filters, onChange }: Props) {
               {column}
               <select
                 className="mt-1 h-10 w-full rounded-md border border-academy-line bg-[#071418] px-3 text-sm text-slate-100 outline-none focus:border-academy-teal"
-                value={filters[column] ?? ""}
+                value={draftFilters[column] ?? ""}
                 onChange={(event) => setFilter(column, event.target.value)}
               >
                 <option value="">Todos</option>
@@ -53,4 +74,3 @@ export function FilterBar({ rows, columns, filters, onChange }: Props) {
     </div>
   );
 }
-

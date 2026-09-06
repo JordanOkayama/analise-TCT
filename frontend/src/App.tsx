@@ -15,7 +15,7 @@ import { Button } from "./components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./components/ui/card";
 import { Badge } from "./components/ui/badge";
 import { num, pct } from "./lib/utils";
-import type { AnalysisResponse, ItemMetric, PreviewResponse, StudentMetric } from "./types/analysis";
+import type { AnalysisResponse, ItemMetric, PreviewResponse, StudentMetric, Zone } from "./types/analysis";
 
 type Tab = "dashboard" | "items" | "students" | "sp" | "groups" | "legend" | "exports";
 
@@ -29,8 +29,42 @@ const tabs: Array<{ id: Tab; label: string; icon: typeof Activity }> = [
   { id: "exports", label: "Relatório", icon: FileText }
 ];
 
-function normalizeDifficultyMetrics(analysis: AnalysisResponse): AnalysisResponse {
+const emptyZoneCounts: Record<Zone, number> = {
+  expected_correct: 0,
+  expected_error: 0,
+  unexpected_correct: 0,
+  anomalous_error: 0
+};
+
+function normalizeAnalysisMetrics(analysis: AnalysisResponse): AnalysisResponse {
   const denominator = Math.max(1, analysis.globals.students_count);
+  const studentScores = new Map(analysis.sp.student_curve.map((point) => [point.label, point.value]));
+  const itemWeights = new Map(analysis.sp.problem_curve.map((point) => [point.label, point.value]));
+  const totalWeight = Math.max(1, analysis.sp.problem_curve.reduce((sum, point) => sum + point.value, 0));
+  const zoneCounts = { ...emptyZoneCounts };
+  const studentInconsistencies = new Map<string, { guesses: number; anomalousErrors: number; weightedPenalty: number }>();
+  const normalizedCells = analysis.sp.cells.map((cell) => {
+    const score = studentScores.get(cell.student_id) ?? 0;
+    const expectedCorrect = cell.col < score;
+    let zone: Zone;
+
+    if (cell.value === 1 && expectedCorrect) zone = "expected_correct";
+    else if (cell.value === 0 && expectedCorrect) zone = "anomalous_error";
+    else if (cell.value === 1) zone = "unexpected_correct";
+    else zone = "expected_error";
+
+    zoneCounts[zone] += 1;
+    if (zone === "unexpected_correct" || zone === "anomalous_error") {
+      const current = studentInconsistencies.get(cell.student_id) ?? { guesses: 0, anomalousErrors: 0, weightedPenalty: 0 };
+      if (zone === "unexpected_correct") current.guesses += 1;
+      if (zone === "anomalous_error") current.anomalousErrors += 1;
+      current.weightedPenalty += itemWeights.get(cell.item) ?? 0;
+      studentInconsistencies.set(cell.student_id, current);
+    }
+
+    return { ...cell, zone };
+  });
+
   return {
     ...analysis,
     items: analysis.items.map((item) => {
@@ -41,7 +75,21 @@ function normalizeDifficultyMetrics(analysis: AnalysisResponse): AnalysisRespons
         proportion_correct: p_i,
         difficulty_p_star: p_i
       };
-    })
+    }),
+    students: analysis.students.map((student) => {
+      const inconsistency = studentInconsistencies.get(student.student_id);
+      return {
+        ...student,
+        guesses: inconsistency?.guesses ?? 0,
+        anomalous_errors: inconsistency?.anomalousErrors ?? 0,
+        caution_index_c_n: Number(((inconsistency?.weightedPenalty ?? 0) / totalWeight).toFixed(4))
+      };
+    }),
+    sp: {
+      ...analysis.sp,
+      cells: normalizedCells,
+      zone_counts: zoneCounts
+    }
   };
 }
 
@@ -85,7 +133,7 @@ export default function App() {
   }
 
   const displayAnalysis = useMemo(() => {
-    return analysis ? normalizeDifficultyMetrics(analysis) : null;
+    return analysis ? normalizeAnalysisMetrics(analysis) : null;
   }, [analysis]);
 
   const studentRows = useMemo<Record<string, unknown>[]>(() => {

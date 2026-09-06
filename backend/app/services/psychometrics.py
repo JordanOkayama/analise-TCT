@@ -64,8 +64,8 @@ def cronbach_alpha(matrix: pd.DataFrame) -> float | None:
 
 def _upper_lower_discrimination(matrix: pd.DataFrame, scores: pd.Series, item: str) -> float | None:
     n = len(scores)
-    group_size = max(1, int(round(n * 0.27)))
-    if n < 4 or group_size == 0:
+    group_size = max(1, n // 3)
+    if n < 3 or group_size == 0:
         return None
     ordered = matrix.assign(_score=scores).sort_values("_score", ascending=False)
     upper = ordered.head(group_size)[item].mean()
@@ -124,19 +124,16 @@ def _build_sp(context: MatrixContext, scores: pd.Series) -> SPAnalysis:
         student_score = int(ordered_matrix.loc[student_id].sum())
         for col, item in enumerate(ordered_items):
             value = int(ordered_matrix.loc[student_id, item])
-            expected_by_student = col < student_score
-            expected_by_problem = row < int(ordered_matrix[item].sum())
-            expected_correct = expected_by_student and expected_by_problem
-            expected_error = not expected_by_student and not expected_by_problem
+            expected_correct = col < student_score
 
             if value == 1 and expected_correct:
                 zone = "expected_correct"
-            elif value == 0 and expected_error:
-                zone = "expected_error"
+            elif value == 0 and expected_correct:
+                zone = "anomalous_error"
             elif value == 1:
                 zone = "unexpected_correct"
             else:
-                zone = "anomalous_error"
+                zone = "expected_error"
 
             zone_counts[zone] += 1
             if col == student_score or row == int(ordered_matrix[item].sum()):
@@ -168,45 +165,58 @@ def _item_metrics(context: MatrixContext, scores: pd.Series, sp: SPAnalysis) -> 
         frequency_correct = int(values.sum())
         proportion_correct = frequency_correct / len(values)
         scores_without_item = scores - values
+        discrimination = _upper_lower_discrimination(matrix, scores, item)
+        point_biserial = _point_biserial(values, scores_without_item)
         metrics.append(
             ItemMetric(
                 item=item,
                 order=order + 1,
                 frequency_correct=frequency_correct,
                 proportion_correct=round(float(proportion_correct), 4),
-                difficulty_p_star=round(float(1 - proportion_correct), 4),
-                discrimination=_upper_lower_discrimination(matrix, scores, item),
-                point_biserial=_point_biserial(values, scores_without_item),
-                coefficient_d_i=round(unexpected_by_item.get(item, 0) / max(1, len(values)), 4),
-                item_total_correlation=_point_biserial(values, scores_without_item),
+                difficulty_p_star=round(float(proportion_correct), 4),
+                discrimination=discrimination,
+                point_biserial=point_biserial,
+                coefficient_d_i=discrimination,
+                sp_atypical_rate=round(unexpected_by_item.get(item, 0) / max(1, len(values)), 4),
+                item_total_correlation=point_biserial,
             )
         )
     return metrics
 
 
 def _student_metrics(context: MatrixContext, scores: pd.Series, sp: SPAnalysis) -> list[StudentMetric]:
-    anomalous: dict[str, int] = {}
-    guesses: dict[str, int] = {}
-    for cell in sp.cells:
-        if cell.zone == "anomalous_error":
-            anomalous[cell.student_id] = anomalous.get(cell.student_id, 0) + 1
-        if cell.zone == "unexpected_correct":
-            guesses[cell.student_id] = guesses.get(cell.student_id, 0) + 1
+    ordered_df = context.df.set_index(context.df[context.id_column].astype(str)).loc[sp.ordered_students]
+    ordered_matrix = ordered_df[sp.ordered_items].astype(int)
+    item_weights = ordered_matrix.sum(axis=0).astype(float)
+    total_weight = float(item_weights.sum())
+    inconsistency_by_student: dict[str, tuple[float, int, int]] = {}
+
+    for student_id, response_row in ordered_matrix.iterrows():
+        student_score = int(response_row.sum())
+        easy_items = sp.ordered_items[:student_score]
+        hard_items = sp.ordered_items[student_score:]
+
+        anomalous_errors = int((response_row[easy_items] == 0).sum()) if easy_items else 0
+        guesses = int((response_row[hard_items] == 1).sum()) if hard_items else 0
+
+        easy_penalty = float(((1 - response_row[easy_items]) * item_weights[easy_items]).sum()) if easy_items else 0.0
+        hard_penalty = float((response_row[hard_items] * item_weights[hard_items]).sum()) if hard_items else 0.0
+        caution = (easy_penalty + hard_penalty) / total_weight if total_weight > 0 else 0.0
+        inconsistency_by_student[str(student_id)] = (round(caution, 4), guesses, anomalous_errors)
 
     metrics: list[StudentMetric] = []
     for idx, row in context.df.iterrows():
         student_id = str(row[context.id_column])
         total_correct = int(scores.loc[idx])
         metadata = {col: row[col] for col in context.metadata_columns if col in context.df.columns}
-        anomaly_count = anomalous.get(student_id, 0)
-        guess_count = guesses.get(student_id, 0)
+        caution, guess_count, anomaly_count = inconsistency_by_student.get(student_id, (0.0, 0, 0))
         metrics.append(
             StudentMetric(
                 student_id=student_id,
                 raw_score=total_correct,
                 total_correct=total_correct,
                 percent_correct=round(total_correct / len(context.item_columns), 4),
-                caution_index_c_n=round(anomaly_count / max(1, len(context.item_columns) - total_correct), 4),
+                caution_index_c_n=caution,
                 guesses=guess_count,
                 anomalous_errors=anomaly_count,
                 metadata=metadata,

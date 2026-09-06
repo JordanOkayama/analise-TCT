@@ -19,6 +19,8 @@ import type { AnalysisResponse, ItemMetric, PreviewResponse, StudentMetric, Zone
 
 type Tab = "dashboard" | "items" | "students" | "sp" | "groups" | "legend" | "exports";
 
+const APP_VERSION = "1.0.3";
+
 const tabs: Array<{ id: Tab; label: string; icon: typeof Activity }> = [
   { id: "dashboard", label: "Dashboard", icon: Activity },
   { id: "items", label: "Itens", icon: BookOpenCheck },
@@ -36,6 +38,14 @@ const emptyZoneCounts: Record<Zone, number> = {
   anomalous_error: 0
 };
 
+function classifySPCell(value: 0 | 1, col: number, studentScore: number): Zone {
+  const expectedCorrect = col < studentScore;
+  if (value === 1 && expectedCorrect) return "expected_correct";
+  if (value === 0 && expectedCorrect) return "anomalous_error";
+  if (value === 1) return "unexpected_correct";
+  return "expected_error";
+}
+
 function normalizeAnalysisMetrics(analysis: AnalysisResponse): AnalysisResponse {
   const denominator = Math.max(1, analysis.globals.students_count);
   const studentScores = new Map(analysis.sp.student_curve.map((point) => [point.label, point.value]));
@@ -45,13 +55,7 @@ function normalizeAnalysisMetrics(analysis: AnalysisResponse): AnalysisResponse 
   const studentInconsistencies = new Map<string, { guesses: number; anomalousErrors: number; weightedPenalty: number }>();
   const normalizedCells = analysis.sp.cells.map((cell) => {
     const score = studentScores.get(cell.student_id) ?? 0;
-    const expectedCorrect = cell.col < score;
-    let zone: Zone;
-
-    if (cell.value === 1 && expectedCorrect) zone = "expected_correct";
-    else if (cell.value === 0 && expectedCorrect) zone = "anomalous_error";
-    else if (cell.value === 1) zone = "unexpected_correct";
-    else zone = "expected_error";
+    const zone = classifySPCell(cell.value, cell.col, score);
 
     zoneCounts[zone] += 1;
     if (zone === "unexpected_correct" || zone === "anomalous_error") {
@@ -195,6 +199,7 @@ export default function App() {
             <Badge className="rounded-md">FastAPI</Badge>
             <Badge className="rounded-md">React + TypeScript</Badge>
             <Badge className="rounded-md">Exportação acadêmica</Badge>
+            <Badge className="rounded-md">v{APP_VERSION}</Badge>
           </div>
         </header>
 

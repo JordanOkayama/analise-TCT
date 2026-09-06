@@ -86,6 +86,17 @@ def _point_biserial(item_values: pd.Series, scores_without_item: pd.Series) -> f
         return None
 
 
+def _sp_zone(value: int, col: int, student_score: int) -> str:
+    expected_correct = col < student_score
+    if value == 1 and expected_correct:
+        return "expected_correct"
+    if value == 0 and expected_correct:
+        return "anomalous_error"
+    if value == 1:
+        return "unexpected_correct"
+    return "expected_error"
+
+
 def _build_sp(context: MatrixContext, scores: pd.Series) -> SPAnalysis:
     matrix = context.matrix.copy()
     item_correct = matrix.sum(axis=0)
@@ -124,16 +135,7 @@ def _build_sp(context: MatrixContext, scores: pd.Series) -> SPAnalysis:
         student_score = int(ordered_matrix.loc[student_id].sum())
         for col, item in enumerate(ordered_items):
             value = int(ordered_matrix.loc[student_id, item])
-            expected_correct = col < student_score
-
-            if value == 1 and expected_correct:
-                zone = "expected_correct"
-            elif value == 0 and expected_correct:
-                zone = "anomalous_error"
-            elif value == 1:
-                zone = "unexpected_correct"
-            else:
-                zone = "expected_error"
+            zone = _sp_zone(value, col, student_score)
 
             zone_counts[zone] += 1
             if col == student_score or row == int(ordered_matrix[item].sum()):
@@ -185,28 +187,24 @@ def _student_metrics(context: MatrixContext, scores: pd.Series, sp: SPAnalysis) 
     item_weights = ordered_matrix.sum(axis=0).astype(float)
     total_weight = float(item_weights.sum())
     inconsistency_by_student: dict[str, tuple[float, int, int]] = {}
-    details_by_student: dict[str, dict[str, float | int]] = {
-        student_id: {"guesses": 0, "anomalous_errors": 0, "penalty": 0.0}
-        for student_id in sp.ordered_students
-    }
 
-    for cell in sp.cells:
-        if cell.zone not in {"anomalous_error", "unexpected_correct"}:
-            continue
-        details = details_by_student[cell.student_id]
-        if cell.zone == "unexpected_correct":
-            details["guesses"] = int(details["guesses"]) + 1
-        else:
-            details["anomalous_errors"] = int(details["anomalous_errors"]) + 1
-        details["penalty"] = float(details["penalty"]) + float(item_weights[cell.item])
+    for student_id, response_row in ordered_matrix.iterrows():
+        student_score = int(response_row.sum())
+        guesses = 0
+        anomalous_errors = 0
+        penalty = 0.0
 
-    for student_id, details in details_by_student.items():
-        caution = float(details["penalty"]) / total_weight if total_weight > 0 else 0.0
-        inconsistency_by_student[str(student_id)] = (
-            round(caution, 4),
-            int(details["guesses"]),
-            int(details["anomalous_errors"]),
-        )
+        for col, item in enumerate(sp.ordered_items):
+            zone = _sp_zone(int(response_row[item]), col, student_score)
+            if zone == "unexpected_correct":
+                guesses += 1
+                penalty += float(item_weights[item])
+            elif zone == "anomalous_error":
+                anomalous_errors += 1
+                penalty += float(item_weights[item])
+
+        caution = penalty / total_weight if total_weight > 0 else 0.0
+        inconsistency_by_student[str(student_id)] = (round(caution, 4), guesses, anomalous_errors)
 
     metrics: list[StudentMetric] = []
     for idx, row in context.df.iterrows():

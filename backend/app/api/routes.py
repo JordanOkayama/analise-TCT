@@ -6,7 +6,13 @@ from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from fastapi.responses import Response, StreamingResponse
 
 from app.models.schemas import AnalysisResponse, PreviewResponse
-from app.services.csv_parser import CSVValidationError, build_preview, read_csv_upload, validate_and_prepare
+from app.services.csv_parser import (
+    CSVValidationError,
+    build_preview,
+    normalize_lookup_value,
+    read_csv_upload,
+    validate_and_prepare,
+)
 from app.services.psychometrics import MatrixContext, analyze_matrix
 from app.services.reporting import build_pdf_report
 
@@ -22,7 +28,12 @@ def _parse_filters(filters: str | None) -> dict[str, str]:
         raise HTTPException(status_code=422, detail="Filtros em formato inválido.") from exc
     if not isinstance(parsed, dict):
         raise HTTPException(status_code=422, detail="Filtros devem ser enviados como objeto JSON.")
-    return {str(key): str(value) for key, value in parsed.items() if str(value).strip()}
+    selected: dict[str, str] = {}
+    for key, value in parsed.items():
+        normalized = normalize_lookup_value(value)
+        if normalized:
+            selected[str(key)] = normalized
+    return selected
 
 
 async def _context_from_upload(file: UploadFile, filters: str | None = None) -> MatrixContext:
@@ -42,7 +53,7 @@ async def _context_from_upload(file: UploadFile, filters: str | None = None) -> 
                 detail=f"Colunas de filtro inválidas: {', '.join(invalid_columns)}.",
             )
         for column, value in selected_filters.items():
-            prepared = prepared[prepared[column].astype(str) == value]
+            prepared = prepared[prepared[column].map(normalize_lookup_value) == value]
         if prepared.empty:
             raise HTTPException(status_code=422, detail="Nenhum examinando encontrado para os filtros selecionados.")
 

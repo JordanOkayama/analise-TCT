@@ -2,6 +2,13 @@ import type { AnalysisResponse, PreviewResponse } from "../types/analysis";
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
 
+export type ApiHealth = {
+  status: string;
+  service: string;
+  api_version?: string;
+  report_version?: string;
+};
+
 function apiUrl(path: string) {
   return `${API_BASE_URL}${path}`;
 }
@@ -18,6 +25,11 @@ async function upload<T>(path: string, file: File): Promise<T> {
 }
 
 export const api = {
+  async health() {
+    const response = await fetch(apiUrl("/api/health"));
+    if (!response.ok) throw new Error("API indisponível.");
+    return response.json() as Promise<ApiHealth>;
+  },
   preview: (file: File) => upload<PreviewResponse>("/api/preview", file),
   analyze: (file: File) => upload<AnalysisResponse>("/api/analyze", file),
   async reportPdf(file: File) {

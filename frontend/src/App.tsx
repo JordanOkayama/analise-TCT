@@ -18,7 +18,7 @@ import type { AnalysisResponse, ItemMetric, PreviewResponse, StudentMetric, Zone
 
 type Tab = "dashboard" | "items" | "students" | "sp" | "groups" | "legend" | "exports";
 
-const APP_VERSION = "1.0.10";
+const APP_VERSION = "1.0.11";
 
 const tabs: Array<{ id: Tab; label: string; icon: typeof Activity }> = [
   { id: "dashboard", label: "Dashboard", icon: Activity },
@@ -114,12 +114,28 @@ export default function App() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [apiVersion, setApiVersion] = useState<string>("verificando");
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
     document.documentElement.style.colorScheme = theme;
     window.localStorage.setItem("psicoedu-theme", theme);
   }, [theme]);
+
+  useEffect(() => {
+    let active = true;
+    api.health()
+      .then((health) => {
+        if (!active) return;
+        setApiVersion(health.report_version ? `v${health.report_version}` : "antiga");
+      })
+      .catch(() => {
+        if (active) setApiVersion("indisponível");
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   async function analyze() {
     if (!file) return;
@@ -169,7 +185,8 @@ export default function App() {
             <Badge className="rounded-md">FastAPI</Badge>
             <Badge className="rounded-md">React + TypeScript</Badge>
             <Badge className="rounded-md">Exportação acadêmica</Badge>
-            <Badge className="rounded-md">v{APP_VERSION}</Badge>
+            <Badge className="rounded-md">Site v{APP_VERSION}</Badge>
+            <Badge className="rounded-md">API {apiVersion}</Badge>
           </div>
         </header>
 

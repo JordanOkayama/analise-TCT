@@ -1,22 +1,24 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Activity, BookOpenCheck, Database, FileText, HelpCircle, Layers3, Microscope, UsersRound } from "lucide-react";
 import { api } from "./api/client";
 import { AcademicCharts } from "./components/Charts";
 import { DataTable } from "./components/DataTable";
-import { FilterBar } from "./components/FilterBar";
 import { GroupComparison } from "./components/GroupComparison";
 import { LegendGuide } from "./components/LegendGuide";
 import { MetricCards } from "./components/MetricCards";
 import { ReportActions } from "./components/ReportActions";
 import { SPHeatmap } from "./components/SPHeatmap";
+import { ThemeToggle, type ThemeMode } from "./components/ThemeToggle";
 import { UploadPanel } from "./components/UploadPanel";
 import { Button } from "./components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./components/ui/card";
 import { Badge } from "./components/ui/badge";
 import { num, pct } from "./lib/utils";
-import type { AnalysisResponse, ItemMetric, PreviewResponse, StudentMetric } from "./types/analysis";
+import type { AnalysisResponse, ItemMetric, PreviewResponse, StudentMetric, Zone } from "./types/analysis";
 
 type Tab = "dashboard" | "items" | "students" | "sp" | "groups" | "legend" | "exports";
+
+const APP_VERSION = "1.0.10";
 
 const tabs: Array<{ id: Tab; label: string; icon: typeof Activity }> = [
   { id: "dashboard", label: "Dashboard", icon: Activity },
@@ -28,14 +30,96 @@ const tabs: Array<{ id: Tab; label: string; icon: typeof Activity }> = [
   { id: "exports", label: "Relatório", icon: FileText }
 ];
 
+const emptyZoneCounts: Record<Zone, number> = {
+  expected_correct: 0,
+  expected_error: 0,
+  unexpected_correct: 0,
+  anomalous_error: 0
+};
+
+function classifySPCell(value: 0 | 1, col: number, studentScore: number): Zone {
+  const expectedCorrect = col < studentScore;
+  if (value === 1 && expectedCorrect) return "expected_correct";
+  if (value === 0 && expectedCorrect) return "anomalous_error";
+  if (value === 1) return "unexpected_correct";
+  return "expected_error";
+}
+
+function normalizeStudentId(value: string | number) {
+  return String(value).replace(/\.0$/, "");
+}
+
+function normalizeAnalysisMetrics(analysis: AnalysisResponse): AnalysisResponse {
+  const denominator = Math.max(1, analysis.globals.students_count);
+  const studentScores = new Map(analysis.sp.student_curve.map((point) => [normalizeStudentId(point.label), point.value]));
+  const itemWeights = new Map(analysis.sp.problem_curve.map((point) => [point.label, point.value]));
+  const totalWeight = Math.max(1, analysis.sp.problem_curve.reduce((sum, point) => sum + point.value, 0));
+  const zoneCounts = { ...emptyZoneCounts };
+  const studentInconsistencies = new Map<string, { guesses: number; anomalousErrors: number; weightedPenalty: number }>();
+  const normalizedCells = analysis.sp.cells.map((cell) => {
+    const studentId = normalizeStudentId(cell.student_id);
+    const score = studentScores.get(studentId) ?? 0;
+    const zone = classifySPCell(cell.value, cell.col, score);
+
+    zoneCounts[zone] += 1;
+    if (zone === "unexpected_correct" || zone === "anomalous_error") {
+      const current = studentInconsistencies.get(studentId) ?? { guesses: 0, anomalousErrors: 0, weightedPenalty: 0 };
+      if (zone === "unexpected_correct") current.guesses += 1;
+      if (zone === "anomalous_error") current.anomalousErrors += 1;
+      current.weightedPenalty += itemWeights.get(cell.item) ?? 0;
+      studentInconsistencies.set(studentId, current);
+    }
+
+    return { ...cell, student_id: studentId, zone };
+  });
+
+  return {
+    ...analysis,
+    items: analysis.items.map((item) => {
+      const p_i = Number((item.frequency_correct / denominator).toFixed(4));
+      const { sp_atypical_rate: _removed, ...itemWithoutAtypicalRate } = item as ItemMetric & { sp_atypical_rate?: number };
+      return {
+        ...itemWithoutAtypicalRate,
+        proportion_correct: p_i,
+        difficulty_p_star: p_i
+      };
+    }),
+    students: analysis.students.map((student) => {
+      const studentId = normalizeStudentId(student.student_id);
+      const inconsistency = studentInconsistencies.get(studentId);
+      return {
+        ...student,
+        student_id: studentId,
+        guesses: inconsistency?.guesses ?? 0,
+        anomalous_errors: inconsistency?.anomalousErrors ?? 0,
+        caution_index_c_n: Number(((inconsistency?.weightedPenalty ?? 0) / totalWeight).toFixed(4))
+      };
+    }),
+    sp: {
+      ...analysis.sp,
+      cells: normalizedCells,
+      zone_counts: zoneCounts
+    }
+  };
+}
+
 export default function App() {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<PreviewResponse | null>(null);
   const [analysis, setAnalysis] = useState<AnalysisResponse | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
-  const [filters, setFilters] = useState<Record<string, string>>({});
+  const [theme, setTheme] = useState<ThemeMode>(() => {
+    const saved = window.localStorage.getItem("psicoedu-theme");
+    return saved === "light" ? "light" : "dark";
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.style.colorScheme = theme;
+    window.localStorage.setItem("psicoedu-theme", theme);
+  }, [theme]);
 
   async function analyze() {
     if (!file) return;
@@ -53,15 +137,18 @@ export default function App() {
     }
   }
 
-  const studentRows = useMemo<Record<string, unknown>[]>(() => {
-    return analysis?.students.map((student) => ({ ...student, ...student.metadata })) ?? [];
+  const displayAnalysis = useMemo(() => {
+    return analysis ? normalizeAnalysisMetrics(analysis) : null;
   }, [analysis]);
 
-  const filteredStudentRows = useMemo(() => {
-    return studentRows.filter((row) => {
-      return Object.entries(filters).every(([key, value]) => !value || String(row[key] ?? "") === value);
-    });
-  }, [studentRows, filters]);
+  const studentRows = useMemo<Record<string, unknown>[]>(() => {
+    return displayAnalysis?.students.map((student) => ({ ...student, ...student.metadata })) ?? [];
+  }, [displayAnalysis]);
+
+  function handleFileChange(selectedFile: File | null) {
+    setFile(selectedFile);
+    setAnalysis(null);
+  }
 
   return (
     <main className="min-h-screen px-4 py-5 sm:px-6 lg:px-8">
@@ -77,10 +164,12 @@ export default function App() {
               Ambiente acadêmico para análise psicométrica de avaliações educacionais, com foco em Educação Matemática e Avaliação Educacional.
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <ThemeToggle theme={theme} onToggle={() => setTheme((current) => current === "dark" ? "light" : "dark")} />
             <Badge className="rounded-md">FastAPI</Badge>
             <Badge className="rounded-md">React + TypeScript</Badge>
             <Badge className="rounded-md">Exportação acadêmica</Badge>
+            <Badge className="rounded-md">v{APP_VERSION}</Badge>
           </div>
         </header>
 
@@ -89,17 +178,17 @@ export default function App() {
           preview={preview}
           loading={loading}
           error={error}
-          onFile={setFile}
+          onFile={handleFileChange}
           onPreview={setPreview}
           onAnalyze={analyze}
           onError={setError}
         />
 
-        {analysis && (
+        {displayAnalysis && (
           <>
-            {analysis.warnings.length > 0 && (
+            {displayAnalysis.warnings.length > 0 && (
               <div className="rounded-lg border border-academy-gold/50 bg-academy-gold/10 p-4 text-sm text-yellow-100">
-                {analysis.warnings.map((warning) => <p key={warning}>{warning}</p>)}
+                {displayAnalysis.warnings.map((warning) => <p key={warning}>{warning}</p>)}
               </div>
             )}
 
@@ -120,17 +209,10 @@ export default function App() {
               })}
             </nav>
 
-            <FilterBar
-              rows={studentRows}
-              columns={analysis.preview.metadata_columns}
-              filters={filters}
-              onChange={setFilters}
-            />
-
             {activeTab === "dashboard" && (
               <section className="space-y-5">
-                <MetricCards metrics={analysis.globals} />
-                <AcademicCharts analysis={analysis} />
+                <MetricCards metrics={displayAnalysis.globals} />
+                <AcademicCharts analysis={displayAnalysis} />
               </section>
             )}
 
@@ -141,16 +223,14 @@ export default function App() {
                 </CardHeader>
                 <CardContent>
                   <DataTable
-                    rows={analysis.items as unknown as Record<string, unknown>[]}
+                    rows={displayAnalysis.items as unknown as Record<string, unknown>[]}
                     filename="indicadores-itens.csv"
                     columns={[
                       { key: "item", label: "Item" },
                       { key: "frequency_correct", label: "Acertos" },
-                      { key: "proportion_correct", label: "Prop. acerto", render: (row) => pct((row as unknown as ItemMetric).proportion_correct) },
-                      { key: "difficulty_p_star", label: "p*", render: (row) => num((row as unknown as ItemMetric).difficulty_p_star) },
-                      { key: "discrimination", label: "Discriminação", render: (row) => num((row as unknown as ItemMetric).discrimination) },
-                      { key: "point_biserial", label: "r_pbi", render: (row) => num((row as unknown as ItemMetric).point_biserial) },
-                      { key: "coefficient_d_i", label: "D_i", render: (row) => num((row as unknown as ItemMetric).coefficient_d_i) }
+                      { key: "difficulty_p_star", label: "p_i", render: (row) => num((row as unknown as ItemMetric).difficulty_p_star) },
+                      { key: "coefficient_d_i", label: "D_i", render: (row) => num((row as unknown as ItemMetric).coefficient_d_i) },
+                      { key: "point_biserial", label: "r_pbi", render: (row) => num((row as unknown as ItemMetric).point_biserial) }
                     ]}
                   />
                 </CardContent>
@@ -164,7 +244,7 @@ export default function App() {
                 </CardHeader>
                 <CardContent>
                   <DataTable
-                    rows={filteredStudentRows as Record<string, unknown>[]}
+                    rows={studentRows}
                     filename="indicadores-estudantes.csv"
                     columns={[
                       { key: "student_id", label: "ID" },
@@ -173,16 +253,16 @@ export default function App() {
                       { key: "caution_index_c_n", label: "C_n", render: (row) => num((row as unknown as StudentMetric).caution_index_c_n) },
                       { key: "guesses", label: "Chutes" },
                       { key: "anomalous_errors", label: "Erros anômalos" },
-                      ...analysis.preview.metadata_columns.map((column) => ({ key: column, label: column }))
+                      ...displayAnalysis.preview.metadata_columns.map((column) => ({ key: column, label: column }))
                     ]}
                   />
                 </CardContent>
               </Card>
             )}
 
-            {activeTab === "sp" && <SPHeatmap analysis={analysis} />}
+            {activeTab === "sp" && <SPHeatmap analysis={displayAnalysis} />}
 
-            {activeTab === "groups" && <GroupComparison groups={analysis.groups} />}
+            {activeTab === "groups" && <GroupComparison groups={displayAnalysis.groups} />}
 
             {activeTab === "legend" && <LegendGuide />}
 
@@ -192,11 +272,11 @@ export default function App() {
                   <CardTitle>Exportação e relatório acadêmico</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-5">
-                  <ReportActions file={file} analysis={analysis} />
+                  <ReportActions file={file} analysis={displayAnalysis} />
                   <div className="grid gap-4 md:grid-cols-3">
                     <div className="rounded-md border border-academy-line bg-white/[.03] p-4">
                       <p className="text-sm font-medium text-slate-100">Resumo estatístico</p>
-                      <p className="mt-2 text-sm text-slate-400">Média {num(analysis.globals.mean_score, 2)}, DP {num(analysis.globals.score_std, 2)} e alfa {num(analysis.globals.cronbach_alpha)}.</p>
+                      <p className="mt-2 text-sm text-slate-400">Média {num(displayAnalysis.globals.mean_score, 2)}, DP {num(displayAnalysis.globals.score_std, 2)} e alfa {num(displayAnalysis.globals.cronbach_alpha)}.</p>
                     </div>
                     <div className="rounded-md border border-academy-line bg-white/[.03] p-4">
                       <p className="text-sm font-medium text-slate-100">Matriz zonal</p>

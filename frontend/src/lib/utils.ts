@@ -26,6 +26,7 @@ export function downloadBlob(blob: Blob, filename: string) {
 
 export function rowsToCsv<T extends Record<string, unknown>>(rows: T[]) {
   if (!rows.length) return "";
+  const delimiter = ";";
   const columns = Array.from(rows.reduce((set, row) => {
     Object.keys(row).forEach((key) => set.add(key));
     return set;
@@ -34,5 +35,6 @@ export function rowsToCsv<T extends Record<string, unknown>>(rows: T[]) {
     const text = typeof value === "object" && value !== null ? JSON.stringify(value) : String(value ?? "");
     return `"${text.replace(/"/g, '""')}"`;
   };
-  return [columns.join(","), ...rows.map((row) => columns.map((col) => escape(row[col])).join(","))].join("\n");
+  const content = [columns.join(delimiter), ...rows.map((row) => columns.map((col) => escape(row[col])).join(delimiter))].join("\n");
+  return `\ufeffsep=${delimiter}\n${content}`;
 }

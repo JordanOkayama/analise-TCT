@@ -1,4 +1,5 @@
 import csv
+import re
 from io import BytesIO, StringIO
 from typing import Any
 
@@ -22,6 +23,15 @@ METADATA_CANDIDATES = {
 
 class CSVValidationError(ValueError):
     pass
+
+
+def normalize_lookup_value(value: Any) -> str:
+    if value is None or pd.isna(value):
+        return ""
+    text = str(value).strip()
+    if re.fullmatch(r"-?\d+\.0", text):
+        return text[:-2]
+    return text
 
 
 def detect_separator(raw: bytes) -> str:
@@ -125,4 +135,3 @@ def build_preview(
         metadata_columns=metadata_columns,
         issues=issues,
     )
-

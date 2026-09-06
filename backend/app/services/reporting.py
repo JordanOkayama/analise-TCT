@@ -7,6 +7,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import cm
 from reportlab.platypus import (
+    PageBreak,
     Paragraph,
     SimpleDocTemplate,
     Spacer,
@@ -15,6 +16,8 @@ from reportlab.platypus import (
 )
 
 from app.models.schemas import AnalysisResponse
+
+REPORT_VERSION = "1.0.11"
 
 
 def _fmt(value: float | int | None) -> str:
@@ -64,6 +67,7 @@ def build_pdf_report(analysis: AnalysisResponse) -> bytes:
             "Análise baseada em Teoria Clássica dos Testes e organização S-P para matriz binária de respostas.",
             styles["BodyText"],
         ),
+        Paragraph(f"Versão do relatório: {REPORT_VERSION}", styles["BodyText"]),
         Spacer(1, 8),
     ]
 
@@ -81,22 +85,34 @@ def build_pdf_report(analysis: AnalysisResponse) -> bytes:
 
     interpretation = (
         "Valores mais altos de Alfa de Cronbach indicam maior consistência interna do instrumento. "
-        "Itens com alta dificuldade p* requerem atenção pedagógica, enquanto correlações ponto-bisserial "
-        "positivas sugerem alinhamento entre o item e o escore total. A matriz S-P destaca acertos "
+        "O índice p_i representa a proporção de acertos do item; valores altos indicam itens mais fáceis "
+        "para a amostra. Correlações ponto-bisserial positivas sugerem alinhamento entre o item e o escore total. "
+        "A matriz S-P destaca acertos "
         "inesperados e erros anômalos para análise diagnóstica."
     )
     story.extend([Spacer(1, 8), Paragraph("Interpretação básica", styles["Section"]), Paragraph(interpretation, styles["BodyText"])])
 
-    item_rows = [["Item", "p*", "Discr.", "r_pbi", "D_i"]]
-    for item in analysis.items[:18]:
+    item_rows = [["Item", "p_i", "D_i", "r_pbi"]]
+    for item in analysis.items:
         item_rows.append([
             item.item,
             _fmt(item.difficulty_p_star),
-            _fmt(item.discrimination),
-            _fmt(item.point_biserial),
             _fmt(item.coefficient_d_i),
+            _fmt(item.point_biserial),
         ])
     story.extend([Spacer(1, 8), Paragraph("Indicadores por item", styles["Section"]), _table(item_rows)])
+
+    student_rows = [["ID", "Escore", "% acerto", "C_n", "Chutes", "Erros anômalos"]]
+    for student in analysis.students:
+        student_rows.append([
+            student.student_id,
+            str(student.raw_score),
+            f"{student.percent_correct * 100:.1f}%",
+            _fmt(student.caution_index_c_n),
+            str(student.guesses),
+            str(student.anomalous_errors),
+        ])
+    story.extend([PageBreak(), Paragraph("Indicadores por estudante", styles["Section"]), _table(student_rows)])
 
     zone = analysis.sp.zone_counts
     zone_rows = [["Zona S-P", "Frequência"], *[[key, str(value)] for key, value in zone.items()]]
@@ -130,4 +146,3 @@ def _table(rows: list[list[str]]) -> Table:
         )
     )
     return table
-

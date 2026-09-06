@@ -28,4 +28,3 @@ export const api = {
     return response.blob();
   }
 };
-

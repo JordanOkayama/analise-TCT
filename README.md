@@ -6,7 +6,7 @@ Aplicação web acadêmica para análise psicométrica de avaliações educacion
 
 - Importação de CSV com separador `,` ou `;`, detecção automática e validação binária.
 - Prévia da matriz, validação de coluna `ID` e reconhecimento de metadados.
-- Indicadores por item: dificuldade `p*`, proporção de acerto, frequência de acertos, discriminação, correlação ponto-bisserial, correlação item-total e coeficiente `D_i`.
+- Indicadores por item: índice `p_i`, proporção de acerto, frequência de acertos, correlação ponto-bisserial, correlação item-total, discriminação por grupos extremos `D_i` e taxa de atipicidade S-P.
 - Indicadores por estudante: escore bruto, percentual de acerto, índice de cautela `C_n`, chutes e erros anômalos.
 - Métricas globais: Alfa de Cronbach, média de acertos, desvio padrão, número de estudantes e número de itens.
 - Curva S-P com ordenação de estudantes por escore e itens por facilidade.
@@ -120,11 +120,11 @@ Valores aceitos nos itens:
 
 ## Notas metodológicas
 
-- `p*` foi implementado como índice de dificuldade no sentido de proporção de erro: `p* = 1 - proporção de acerto`.
-- A discriminação usa a diferença entre os grupos superior e inferior, com corte de 27%.
+- `p_i` foi implementado como índice de dificuldade/facilidade no sentido usado na dissertação: `p_i = proporção de acertos`.
+- A discriminação `D_i` usa a diferença entre os terços superior e inferior da distribuição de escores.
 - A correlação ponto-bisserial usa o item contra o escore total sem o próprio item.
-- O coeficiente `D_i` é calculado como a proporção de respostas inesperadas do item na matriz zonal S-P.
-- O índice `C_n` é calculado como razão entre erros anômalos e oportunidades de erro do estudante.
+- A taxa S-P do item é calculada como a proporção de respostas inesperadas do item na matriz zonal S-P.
+- O índice `C_n` segue a formulação ponderada de suspeição: erros em itens esperados como acertos e acertos em itens esperados como erros são ponderados pelas frequências dos itens na matriz ordenada.
 - Para amostras pequenas, o sistema retorna avisos para interpretação acadêmica cuidadosa.
 
 ## Expansão futura
@@ -138,4 +138,3 @@ O backend foi organizado para receber novos serviços estatísticos em `backend/
 - análise longitudinal
 
 O frontend já possui abas e componentes reutilizáveis para incorporar novos painéis analíticos.
-

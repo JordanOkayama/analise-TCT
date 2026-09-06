@@ -19,14 +19,14 @@ export function ReportActions({ file, analysis }: { file: File | null; analysis:
       </Button>
       <Button
         variant="secondary"
-        onClick={() => downloadBlob(new Blob([rowsToCsv(analysis.items as unknown as Record<string, unknown>[])], { type: "text/csv" }), "itens.csv")}
+        onClick={() => downloadBlob(new Blob([rowsToCsv(analysis.items as unknown as Record<string, unknown>[])], { type: "text/csv;charset=utf-8" }), "itens.csv")}
       >
         <Download className="h-4 w-4" />
         Tabela de itens
       </Button>
       <Button
         variant="secondary"
-        onClick={() => downloadBlob(new Blob([rowsToCsv(analysis.students as unknown as Record<string, unknown>[])], { type: "text/csv" }), "estudantes.csv")}
+        onClick={() => downloadBlob(new Blob([rowsToCsv(analysis.students as unknown as Record<string, unknown>[])], { type: "text/csv;charset=utf-8" }), "estudantes.csv")}
       >
         <Download className="h-4 w-4" />
         Tabela de estudantes
@@ -34,4 +34,3 @@ export function ReportActions({ file, analysis }: { file: File | null; analysis:
     </div>
   );
 }
-

@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { Activity, BookOpenCheck, Database, FileText, HelpCircle, Layers3, Microscope, UsersRound } from "lucide-react";
+import { Activity, BookOpenCheck, FileText, HelpCircle, Layers3, Microscope, UsersRound } from "lucide-react";
 import { api } from "./api/client";
 import { AcademicCharts } from "./components/Charts";
 import { DataTable } from "./components/DataTable";
-import { GroupComparison } from "./components/GroupComparison";
 import { LegendGuide } from "./components/LegendGuide";
 import { MetricCards } from "./components/MetricCards";
 import { ReportActions } from "./components/ReportActions";
@@ -16,16 +15,15 @@ import { Badge } from "./components/ui/badge";
 import { num, pct } from "./lib/utils";
 import type { AnalysisResponse, ItemMetric, PreviewResponse, StudentMetric, Zone } from "./types/analysis";
 
-type Tab = "dashboard" | "items" | "students" | "sp" | "groups" | "legend" | "exports";
+type Tab = "dashboard" | "items" | "students" | "sp" | "legend" | "exports";
 
-const APP_VERSION = "1.0.12";
+const APP_VERSION = "1.0.13";
 
 const tabs: Array<{ id: Tab; label: string; icon: typeof Activity }> = [
   { id: "dashboard", label: "Dashboard", icon: Activity },
   { id: "items", label: "Itens", icon: BookOpenCheck },
   { id: "students", label: "Estudantes", icon: UsersRound },
   { id: "sp", label: "Curva S-P", icon: Layers3 },
-  { id: "groups", label: "Grupos", icon: Database },
   { id: "legend", label: "Legendas", icon: HelpCircle },
   { id: "exports", label: "Relatório", icon: FileText }
 ];
@@ -278,8 +276,6 @@ export default function App() {
             )}
 
             {activeTab === "sp" && <SPHeatmap analysis={displayAnalysis} />}
-
-            {activeTab === "groups" && <GroupComparison groups={displayAnalysis.groups} />}
 
             {activeTab === "legend" && <LegendGuide />}
 

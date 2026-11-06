@@ -233,6 +233,7 @@ def _student_metrics(context: MatrixContext, scores: pd.Series, sp: SPAnalysis) 
 
 
 def _group_metrics(context: MatrixContext, scores: pd.Series) -> list[GroupMetric]:
+    # Preserved for future reintegration; not called by the active analysis.
     groups: list[GroupMetric] = []
     matrix = context.matrix
     for variable in context.metadata_columns:
@@ -296,7 +297,8 @@ def analyze_matrix(context: MatrixContext) -> AnalysisResponse:
         items=_item_metrics(context, scores),
         students=_student_metrics(context, scores, sp),
         sp=sp,
-        groups=_group_metrics(context, scores),
+        # Keep the response compatible without computing comparisons by metadata.
+        groups=[],
         preview=preview,
         warnings=warnings,
     )

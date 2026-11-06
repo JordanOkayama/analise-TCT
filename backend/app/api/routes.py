@@ -116,6 +116,8 @@ async def report_pdf(file: UploadFile = File(...), filters: str | None = Form(No
 
 @router.post("/export/{table_name}")
 async def export_table(table_name: str, file: UploadFile = File(...)) -> StreamingResponse:
+    if table_name not in {"items", "students"}:
+        raise HTTPException(status_code=404, detail="Tabela não disponível para exportação.")
     context = await _context_from_upload(file)
     analysis = analyze_matrix(context)
     mapping = {
@@ -132,10 +134,7 @@ async def export_table(table_name: str, file: UploadFile = File(...)) -> Streami
             }
             for student in analysis.students
         ],
-        "groups": [group.model_dump() for group in analysis.groups],
     }
-    if table_name not in mapping:
-        raise HTTPException(status_code=404, detail="Tabela não disponível para exportação.")
     frame = pd.json_normalize(mapping[table_name])
     output = StringIO()
     output.write("\ufeffsep=;\n")

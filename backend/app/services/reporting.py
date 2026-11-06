@@ -17,7 +17,7 @@ from reportlab.platypus import (
 
 from app.models.schemas import AnalysisResponse
 
-REPORT_VERSION = "1.0.12"
+REPORT_VERSION = "1.0.13"
 
 
 def _fmt(value: float | int | None) -> str:
@@ -117,12 +117,6 @@ def build_pdf_report(analysis: AnalysisResponse) -> bytes:
     zone = analysis.sp.zone_counts
     zone_rows = [["Zona S-P", "Frequência"], *[[key, str(value)] for key, value in zone.items()]]
     story.extend([Spacer(1, 8), Paragraph("Matriz zonal", styles["Section"]), _table(zone_rows)])
-
-    if analysis.groups:
-        group_rows = [["Variável", "Grupo", "n", "Média", "Alfa"]]
-        for group in analysis.groups[:20]:
-            group_rows.append([group.variable, group.group, str(group.n), _fmt(group.mean_score), _fmt(group.cronbach_alpha)])
-        story.extend([Spacer(1, 8), Paragraph("Comparação entre grupos", styles["Section"]), _table(group_rows)])
 
     doc.build(story)
     return buffer.getvalue()

@@ -9,7 +9,7 @@ def create_app() -> FastAPI:
     settings = get_settings()
     app = FastAPI(
         title=settings.app_name,
-        version="1.0.12",
+        version="1.0.13",
         description="API acadêmica para análise psicométrica com TCT e Curva S-P.",
     )
     app.add_middleware(

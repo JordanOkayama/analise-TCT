@@ -12,6 +12,7 @@ import {
   YAxis
 } from "recharts";
 import type { AnalysisResponse } from "../types/analysis";
+import { scoreBox, type BoxPlotStats } from "../lib/boxplot";
 import { ChartCard } from "./ChartCard";
 
 const axis = { stroke: "#9fb4b8", fontSize: 12 };
@@ -28,7 +29,7 @@ export function AcademicCharts({ analysis }: { analysis: AnalysisResponse }) {
 
   return (
     <div className="grid gap-5 xl:grid-cols-2">
-      <ChartCard id="dificuldade-itens" title="Dificuldade dos itens (p*)">
+      <ChartCard id="dificuldade-itens" title="Índice de dificuldade/facilidade (p_i)">
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={analysis.items}>
             <CartesianGrid strokeDasharray="3 3" />
@@ -64,12 +65,12 @@ export function AcademicCharts({ analysis }: { analysis: AnalysisResponse }) {
         </ResponsiveContainer>
       </ChartCard>
 
-      <ChartCard id="cautela-escore" title="Dispersão entre cautela e escore">
+      <ChartCard id="suspeicao-escore" title="Dispersão entre índice de suspeição e escore">
         <ResponsiveContainer width="100%" height={300}>
           <ScatterChart>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis type="number" dataKey="raw_score" name="Escore" {...axis} />
-            <YAxis type="number" dataKey="caution_index_c_n" name="Cautela" {...axis} />
+            <YAxis type="number" dataKey="caution_index_c_n" name="Índice de suspeição" {...axis} />
             <Tooltip cursor={{ strokeDasharray: "3 3" }} contentStyle={{ background: "#0b1d23", border: "1px solid #1e3a43" }} />
             <Scatter data={analysis.students} fill="#ef6b73" />
           </ScatterChart>
@@ -90,24 +91,23 @@ export function AcademicCharts({ analysis }: { analysis: AnalysisResponse }) {
       </ChartCard>
 
       <ChartCard id="boxplot-escores" title="Boxplot dos escores">
-        <ScoreBoxPlot stats={box.box} max={analysis.globals.items_count} />
+        <ScoreBoxPlot stats={box} max={analysis.globals.items_count} />
       </ChartCard>
     </div>
   );
 }
 
-function scoreBox(values: number[]) {
-  const sorted = [...values].sort((a, b) => a - b);
-  const q = (p: number) => sorted[Math.floor((sorted.length - 1) * p)] ?? 0;
-  return {
-    name: "Escores",
-    box: [sorted[0] ?? 0, q(0.25), q(0.5), q(0.75), sorted[sorted.length - 1] ?? 0],
-    fill: "#5ee0bb"
-  };
-}
-
-function ScoreBoxPlot({ stats, max }: { stats: number[]; max: number }) {
-  const [min, q1, median, q3, high] = stats;
+function ScoreBoxPlot({ stats, max }: { stats: BoxPlotStats | null; max: number }) {
+  if (!stats) return <div className="flex h-[300px] items-center justify-center text-sm text-slate-400">Sem escores disponíveis.</div>;
+  const { lowerWhisker: min, q1, median, q3, upperWhisker: high, iqr, lowerFence, upperFence, outliers } = stats;
+  const format = (value: number) => value.toLocaleString("pt-BR");
+  const summary = `Mínimo dentro do limite: ${format(min)}; Q1: ${format(q1)}; Mediana (Q2): ${format(median)}; Q3: ${format(q3)}; Máximo dentro do limite: ${format(high)}; AIQ: ${format(iqr)}; LI: ${format(lowerFence)}; LS: ${format(upperFence)}.`;
+  const occurrences = new Map<number, number>();
+  const outlierPoints = outliers.map((value) => {
+    const occurrence = occurrences.get(value) ?? 0;
+    occurrences.set(value, occurrence + 1);
+    return { value, occurrence };
+  });
   const width = 820;
   const height = 260;
   const left = 70;
@@ -117,7 +117,15 @@ function ScoreBoxPlot({ stats, max }: { stats: number[]; max: number }) {
   const ticks = Array.from({ length: max + 1 }, (_, index) => index).filter((value) => value === 0 || value === max || value % Math.max(1, Math.ceil(max / 8)) === 0);
 
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} className="h-[300px] w-full">
+    <div className="flex h-[300px] flex-col">
+      <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-300" title={summary}>
+        <span>Mín. no limite: {format(min)}</span><span>Q1: {format(q1)}</span>
+        <span>Mediana: {format(median)}</span><span>Q3: {format(q3)}</span>
+        <span>Máx. no limite: {format(high)}</span><span>AIQ: {format(iqr)}</span>
+        <span>Discrepantes: {outliers.length}</span>
+      </div>
+    <svg viewBox={`0 0 ${width} ${height}`} className="min-h-0 w-full flex-1" role="img" aria-label={`Boxplot dos escores. ${summary} Valores potencialmente discrepantes: ${outliers.length}.`}>
+      <title>{summary} Valores potencialmente discrepantes: {outliers.length ? outliers.map(format).join(", ") : "nenhum"}.</title>
       <line x1={left} y1="210" x2={width - right} y2="210" stroke="#36555e" />
       {ticks.map((tick) => (
         <g key={tick}>
@@ -128,10 +136,15 @@ function ScoreBoxPlot({ stats, max }: { stats: number[]; max: number }) {
       <line x1={scale(min)} y1={y} x2={scale(high)} y2={y} stroke="#e7f1f0" strokeWidth="2" />
       <line x1={scale(min)} y1={y - 28} x2={scale(min)} y2={y + 28} stroke="#e7f1f0" strokeWidth="2" />
       <line x1={scale(high)} y1={y - 28} x2={scale(high)} y2={y + 28} stroke="#e7f1f0" strokeWidth="2" />
-      <rect x={scale(q1)} y={y - 42} width={Math.max(2, scale(q3) - scale(q1))} height="84" fill="#5ee0bb" opacity="0.82" rx="4" />
-      <line x1={scale(median)} y1={y - 46} x2={scale(median)} y2={y + 46} stroke="#071418" strokeWidth="4" />
-      <text x={left} y="44" fill="#cfe2e1" fontSize="13">Min {min} | Q1 {q1} | Mediana {median} | Q3 {q3} | Max {high}</text>
-      <text x={left} y="236" fill="#cfe2e1" fontSize="12">Escore bruto</text>
+      <rect x={scale(q1)} y={y - 42} width={scale(q3) - scale(q1)} height="84" fill="#5ee0bb" opacity="0.82" rx="4" />
+      <line x1={scale(median)} y1={y - 46} x2={scale(median)} y2={y + 46} stroke={iqr === 0 ? "#5ee0bb" : "#071418"} strokeWidth="4" />
+      {outlierPoints.map(({ value, occurrence }, index) => (
+        <circle key={index} data-outlier-score={value} cx={scale(value)} cy={y + (occurrence - ((occurrences.get(value) ?? 1) - 1) / 2) * Math.min(10, 96 / Math.max(1, (occurrences.get(value) ?? 1) - 1))} r="4" fill="#ef6b73" stroke="#071418">
+          <title>Valor potencialmente discrepante: {format(value)} (observação {index + 1}). LI: {format(lowerFence)}; LS: {format(upperFence)}.</title>
+        </circle>
+      ))}
+      <text x={(left + width - right) / 2} y="258" textAnchor="middle" fill="#cfe2e1" fontSize="12">Escore bruto</text>
     </svg>
+    </div>
   );
 }

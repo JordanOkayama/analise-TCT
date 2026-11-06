@@ -2,16 +2,18 @@
 
 Aplicação web acadêmica para análise psicométrica de avaliações educacionais com Teoria Clássica dos Testes (TCT), Curva S-P e matriz zonal. O projeto foi estruturado para pesquisas em Educação Matemática, Avaliação Educacional, TCCs, dissertações e teses.
 
+Versão atual da interface e da API: `v1.0.13`.
+
 ## Principais recursos
 
 - Importação de CSV com separador `,` ou `;`, detecção automática e validação binária.
 - Prévia da matriz, validação de coluna `ID` e reconhecimento de metadados.
-- Indicadores por item: dificuldade `p*`, proporção de acerto, frequência de acertos, discriminação, correlação ponto-bisserial, correlação item-total e coeficiente `D_i`.
-- Indicadores por estudante: escore bruto, percentual de acerto, índice de cautela `C_n`, chutes e erros anômalos.
+- Indicadores por item: índice `p_i`, proporção de acerto, frequência de acertos, correlação ponto-bisserial, correlação item-total e discriminação por grupos extremos `D_i`.
+- Indicadores por estudante: escore bruto, percentual de acerto, índice de suspeição `C_n`, acertos inesperados e erros anômalos.
 - Métricas globais: Alfa de Cronbach, média de acertos, desvio padrão, número de estudantes e número de itens.
 - Curva S-P com ordenação de estudantes por escore e itens por facilidade.
 - Matriz zonal colorida: acerto esperado, erro esperado, acerto inesperado e erro anômalo.
-- Comparação por grupos quando o CSV contém colunas como `escola`, `municipio`, `turma`, `serie` ou `grupo`.
+- Metadados opcionais como `escola`, `municipio`, `turma`, `serie` ou `grupo` para identificação dos estudantes, sem análise comparativa.
 - Gráficos exportáveis em PNG/SVG pelo frontend.
 - Tabelas interativas com busca, ordenação e exportação CSV.
 - Relatório PDF acadêmico gerado pelo backend.
@@ -95,7 +97,7 @@ ID,i1,i2,i3,i4
 2,0,1,0,1
 ```
 
-Com metadados opcionais para comparação entre grupos:
+Com metadados opcionais para identificação dos estudantes:
 
 ```csv
 ID;escola;municipio;turma;serie;i1;i2;i3
@@ -116,15 +118,19 @@ Valores aceitos nos itens:
 - `POST /api/report/pdf`: gera relatório PDF acadêmico.
 - `POST /api/export/items`: exporta indicadores de itens em CSV.
 - `POST /api/export/students`: exporta indicadores de estudantes em CSV.
-- `POST /api/export/groups`: exporta comparação entre grupos em CSV.
+
+A comparação entre grupos foi desativada na v1.0.13: não há aba, cálculo,
+seção no PDF ou exportação CSV de grupos. A API mantém `groups: []` por
+compatibilidade. O indicador `D_i` por grupos extremos permanece inalterado.
+O código anterior e as instruções de reintegração estão preservados em
+`outputs/backup_com_grupos_20261106.zip` e `outputs/guia_sem_grupos_v113.md`.
 
 ## Notas metodológicas
 
-- `p*` foi implementado como índice de dificuldade no sentido de proporção de erro: `p* = 1 - proporção de acerto`.
-- A discriminação usa a diferença entre os grupos superior e inferior, com corte de 27%.
+- `p_i` foi implementado como índice de dificuldade/facilidade no sentido usado na dissertação: `p_i = proporção de acertos`.
+- A discriminação `D_i` usa a diferença entre os terços superior e inferior da distribuição de escores.
 - A correlação ponto-bisserial usa o item contra o escore total sem o próprio item.
-- O coeficiente `D_i` é calculado como a proporção de respostas inesperadas do item na matriz zonal S-P.
-- O índice `C_n` é calculado como razão entre erros anômalos e oportunidades de erro do estudante.
+- O índice de suspeição `C_n` segue a formulação ponderada de suspeição: erros em itens esperados como acertos e acertos em itens esperados como erros são ponderados pelas frequências dos itens na matriz ordenada.
 - Para amostras pequenas, o sistema retorna avisos para interpretação acadêmica cuidadosa.
 
 ## Expansão futura
@@ -138,4 +144,3 @@ O backend foi organizado para receber novos serviços estatísticos em `backend/
 - análise longitudinal
 
 O frontend já possui abas e componentes reutilizáveis para incorporar novos painéis analíticos.
-

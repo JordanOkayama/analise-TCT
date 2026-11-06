@@ -36,7 +36,7 @@ class ItemMetric(BaseModel):
     difficulty_p_star: float
     discrimination: float | None
     point_biserial: float | None
-    coefficient_d_i: float
+    coefficient_d_i: float | None
     item_total_correlation: float | None
 
 
@@ -94,4 +94,3 @@ class AnalysisResponse(BaseModel):
     groups: list[GroupMetric]
     preview: PreviewResponse
     warnings: list[str]
-

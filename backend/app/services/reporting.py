@@ -17,7 +17,7 @@ from reportlab.platypus import (
 
 from app.models.schemas import AnalysisResponse
 
-REPORT_VERSION = "1.0.13"
+REPORT_VERSION = "1.0.14"
 
 
 def _fmt(value: float | int | None) -> str:
@@ -102,7 +102,7 @@ def build_pdf_report(analysis: AnalysisResponse) -> bytes:
         ])
     story.extend([Spacer(1, 8), Paragraph("Indicadores por item", styles["Section"]), _table(item_rows)])
 
-    student_rows = [["ID", "Escore", "% acerto", "Suspeição (C_n)", "Acertos inesperados", "Erros anômalos"]]
+    student_rows = [["ID", "Escore", "% acerto", "Índice de cautela (C_n)", "Acertos inesperados", "Erros anômalos"]]
     for student in analysis.students:
         student_rows.append([
             student.student_id,

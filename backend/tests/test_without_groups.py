@@ -51,7 +51,7 @@ class WithoutGroupsTests(unittest.TestCase):
             text = "\n".join(page.extract_text() or "" for page in pdf.pages)
         self.assertIn("Indicadores por item", text)
         self.assertIn("Indicadores por estudante", text)
-        self.assertIn("1.0.13", text)
+        self.assertIn("1.0.14", text)
         self.assertNotIn("Comparação entre grupos", text)
         analysis = AnalysisResponse.model_validate(self.upload("/api/analyze").json())
         analysis.groups = [GroupMetric(variable="escola", group="A", n=3, mean_score=2, mean_percent=0.67, std_score=1, cronbach_alpha=None)]

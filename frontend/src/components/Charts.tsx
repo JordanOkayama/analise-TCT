@@ -29,7 +29,7 @@ export function AcademicCharts({ analysis }: { analysis: AnalysisResponse }) {
 
   return (
     <div className="grid gap-5 xl:grid-cols-2">
-      <ChartCard id="dificuldade-itens" title="Índice de dificuldade/facilidade (p_i)">
+      <ChartCard id="dificuldade-itens" title="Índice de dificuldade (p_i)">
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={analysis.items}>
             <CartesianGrid strokeDasharray="3 3" />
@@ -65,12 +65,12 @@ export function AcademicCharts({ analysis }: { analysis: AnalysisResponse }) {
         </ResponsiveContainer>
       </ChartCard>
 
-      <ChartCard id="suspeicao-escore" title="Dispersão entre índice de suspeição e escore">
+      <ChartCard id="cautela-escore" title="Dispersão entre índice de cautela e escore">
         <ResponsiveContainer width="100%" height={300}>
           <ScatterChart>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis type="number" dataKey="raw_score" name="Escore" {...axis} />
-            <YAxis type="number" dataKey="caution_index_c_n" name="Índice de suspeição" {...axis} />
+            <YAxis type="number" dataKey="caution_index_c_n" name="Índice de cautela" {...axis} />
             <Tooltip cursor={{ strokeDasharray: "3 3" }} contentStyle={{ background: "#0b1d23", border: "1px solid #1e3a43" }} />
             <Scatter data={analysis.students} fill="#ef6b73" />
           </ScatterChart>

@@ -23,7 +23,7 @@ function studentRows(analysis: AnalysisResponse) {
     ID: student.student_id,
     Escore: student.raw_score,
     "% acerto": student.percent_correct,
-    "Índice de suspeição (C_n)": student.caution_index_c_n,
+    "Índice de cautela (C_n)": student.caution_index_c_n,
     "Acertos inesperados": student.guesses,
     "Erros anômalos": student.anomalous_errors,
     ...student.metadata
